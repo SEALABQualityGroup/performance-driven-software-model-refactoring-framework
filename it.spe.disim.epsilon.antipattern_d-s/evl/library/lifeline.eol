@@ -1,0 +1,78 @@
+operation Lifeline getIndexReceiveMOS(message : Message) : MessageOccuranceSpecification{
+	//TODO
+}
+
+operation Lifeline getBESInitializedBy(op : Operation) : BehaviorExecutionSpecification {
+
+	return BehaviorExecutionSpecification.allInstances->selectOne(
+		bes : BehaviorExecutionSpecification | 
+			bes.getCovereds()->first() == self and 
+				bes.getStart() == op.getMessageIn(self.getInteraction()).getReceiveEvent()		
+	);
+	
+}
+
+operation Lifeline removeInteractionFragment(mes : InteractionFragment){
+	self.getCoveredBys().remove(mes);
+}
+
+
+operation Lifeline getNextIncomingMessageStartingFrom() : Sequence (Message){
+	return Message.allInstances->select(
+		mes : Message | self.getCoveredBys()->exists(mes.getReceiveEvent()) 
+	);
+}
+
+operation Lifeline getBESStartedBy(mos : MessageOccurrenceSpecification) : BehaviorExecutionSpecification{
+	return self.getCoveredBys()->selectOne(
+		iterator : InteractionFragment | iterator.isTypeOf(BehaviorExecutionSpecification) and iterator.getStart() == mos
+	);
+}
+
+operation Lifeline removeCovered(fragment : InteractionFragment){
+	self.getCoveredBys().remove(fragment);
+}
+
+operation Lifeline getOutgoingMessages() : List(Message) {
+	var messages = self.getInteraction().getMessages(); 
+	
+	return messages->select(m : Message | self.getCoveredBys()->exists(mo : InteractionFragment | mo = m.sendEvent));
+}
+
+operation Lifeline getIncomingMessages() : List(Message){
+	var messages = self.getInteraction().getMessages();
+	
+	return messages->select(m : Message | self.getCoveredBys()->exists(mo : MessageOccurrenceSpecification | mo = m.receiveEvent)).asSequence();
+}
+
+operation Lifeline getOutgoingMessages() : List(Message){
+	var messages = self.getInteraction().getMessages(); 
+	
+	return messages->select(m : Message | self.getCoveredBys()->exists(mo : InteractionFragment | mo = m.sendEvent));
+}
+
+operation Lifeline getNextIncomingMessage(mes : Message) : Message{
+
+	var incomingMes = self.getIncomingMessages();
+	
+	for (m in incomingMes){
+		if( m.receiveEvent.namespace.getIndexOf(m.receiveEvent) > mes.receiveEvent.namespace.getIndexOf(mes.receiveEvent) ){
+			return m;
+		}
+	}
+	return null;
+} 
+
+operation Lifeline getNextOutgoingMessage(mes : Message) : Message{
+	var outgoingMes = self.getOutgoingMessages();
+	
+	for (m in outgoingMes){
+		if( self.getInteraction().getIndexOf(m.sendEvent) > self.getInteraction().getIndexOf(mes.sendEvent) )
+			return m;
+	}
+	return null;
+} 
+
+operation Lifeline getBESes() : Sequence(BehaviorExecutionSpecification){
+	return self.getCoveredBys()->select(cov | cov.isTypeOf(BehaviorExecutionSpecification)).asSequence();
+}
