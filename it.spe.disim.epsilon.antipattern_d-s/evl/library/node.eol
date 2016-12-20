@@ -180,7 +180,7 @@ operation Node getNeighboursWithLowUtilization() : Sequence(Node){
 	
 	var lanNode = self.getLinkedNetworkNode()->first();
 	if(lanNode.isUndefined()){
-		" [getNeighboursWithLowUtilization in node.eol]".errln("there was an error!!!");
+		"[[ Method: getNeighboursWithLowUtilization in node.eol ]]".errln("There was an error!!!");
 		return null;
 	}
 	var comPaths = lanNode.getCommunicationPaths();
@@ -253,7 +253,7 @@ operation Node getCriticalDeployedComponent() : Component{
 	for(art in artifacts){
 		var components = art.getManifestedComponents();
 		if(components.isUndefined() or components.isEmpty()){
-			"[getCriticalDeployedComponent() in node.eol]".errln("There was an error!!! ");
+			"[[ Method: getCriticalDeployedComponent() in node.eol ]]".errln("There was an error!!! ");
 		}
 		if( components->first().calculateTotalUtilization().asString() <> "NaN"){
 			utilization = components->first().calculateTotalUtilization().asReal();

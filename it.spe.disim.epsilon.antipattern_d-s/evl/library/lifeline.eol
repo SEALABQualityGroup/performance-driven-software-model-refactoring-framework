@@ -33,11 +33,11 @@ operation Lifeline removeCovered(fragment : InteractionFragment){
 	self.getCoveredBys().remove(fragment);
 }
 
-operation Lifeline getOutgoingMessages() : List(Message) {
+/*operation Lifeline getOutgoingMessages() : List(Message) {
 	var messages = self.getInteraction().getMessages(); 
 	
 	return messages->select(m : Message | self.getCoveredBys()->exists(mo : InteractionFragment | mo = m.sendEvent));
-}
+}*/
 
 operation Lifeline getIncomingMessages() : List(Message){
 	var messages = self.getInteraction().getMessages();

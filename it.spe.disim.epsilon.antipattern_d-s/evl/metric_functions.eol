@@ -104,7 +104,6 @@ operation Component F_numSupplierConnects(th_maxConnects : Integer) : Boolean{
 operation Component F_numRemMsgs(th_maxRemMsgs : Integer) : Boolean{
 	if(self.countRemoteMessages(th_maxRemMsgs))
 		return true;
-		
 	return false;
 }
 

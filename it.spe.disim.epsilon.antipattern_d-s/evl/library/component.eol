@@ -336,7 +336,7 @@ operation Component getCriticalOperation() : Operation{
 	var utilization : Real;
 	
 	if(operations.isUndefined() or operations.isEmpty()){
-		"[getCriticalOperations() in operation.eol]".errln("There was an error!!! ");
+		"[[ Method: getCriticalOperations() in operation.eol ]]".errln("There was an error!!! ");
 		return false;
 	}
 	
@@ -502,33 +502,76 @@ operation Component isRemote(component : Component) : Boolean{
 
 operation Component countRemoteMessages(th_maxRemMsgs : Integer) : Boolean{
 	var map = self.getRemoteMesIntoInteractions();
+	
+	if(map.isUndefined()){
+		"[[ Method: countRemoteMessages() in component.eol ]]".errln("There was an error!!! ");
+		return false;
+	}
+	
 	for(ks in map.keySet()){
-		if(map.get(ks).size() >= th_maxRemMsgs) //numero di messaggi remoti in un interaction
-			return true;
+		
+		for(m in map.get(ks)){
+			for(k in m.keySet()){
+				if(m.get(k).size() >= th_maxRemMsgs) //numero di messaggi remoti in un interaction tra a e b
+					return true;
+			}
+		}
 	}
 	return false;
 }
 
 operation Component getRemoteMesIntoInteractions() : Map{	
-	var returnMap : Map(Interaction, Sequence(Message)) = new Map(Interaction, Sequence(Message));
+	var returnMap : Map(Interaction, Sequence(Map)) = new Map(Interaction, Sequence(Map));
+	
+	var seqMaps : Sequence(Map) = new Sequence(Map);
 	
 	var seqMes : Sequence(Message) = new Sequence(Message);
-	
+	var mapComponentMessages : Map(Component, Sequence(Message)) = new Map(Component, Sequence(Message));
+		
 	var selfInteractions = self.getInteractions();
+	var recipient : Component;
+	
 	for(int in selfInteractions){
-		var seqOfMes = int.getMessageOf(self);
+		var seqOfMes = int.getOutcomingMessageOf(self);
+
+		if(seqOfMes.first().isDefined()){
+			recipient = seqOfMes.first().getSignature().getClass_();
+		}
+
 		for(mes in seqOfMes){
-			if(not mes.isReturn()){
+			if(not mes.isReturn() and mes.hasStereotype("GaCommStep")){
 				var lf = mes.getReceiveLifeline(); //lifeline destinataria
 				var component = lf.getRepresents().getType(); //componente
 				if(component.isTypeOf(Component) and component.isRemote(self) ){ // i due componenti sono remoti
-					seqMes.add(mes);
+					if (recipient.isUndefined() or recipient == component ){
+						seqMes.add(mes);
+					}else if(recipient <> component){ //da testare con un sequence con piu sequenze di messaggi
+						mapComponentMessages.put(recipient, seqMes.clone());
+						"******** recipient *******".println();
+						recipient.println();
+						"******** recipient *******".println();
+						seqMaps.add(mapComponentMessages.clone());
+						"####### mapComponentMessages ############".println();
+						mapComponentMessages.println();
+						"####### mapComponentMessages ############".println();
+						seqMes.clear();
+						mapComponentMessages.clear();
+						recipient == component;
+					}
 				}
 			} 
 		}
-		if(not seqMes.isEmpty() ){
-			returnMap.put(int, seqMes.clone());
+		
+		if(not seqMes.isEmpty()){
+			mapComponentMessages.put(recipient, seqMes.clone());
+			seqMaps.add(mapComponentMessages.clone());
 			seqMes.clear();
+			mapComponentMessages.clear();
+		}
+		
+		if(not seqMaps.isEmpty() ){
+			returnMap.put(int, seqMaps.clone());
+			seqMaps.clear();
 		}
 	}
 	return returnMap;
@@ -537,66 +580,200 @@ operation Component getRemoteMesIntoInteractions() : Map{
 operation Component countRemoteInstances(th_maxRemInst : Integer) : Boolean{
 	var map = self.getRemoteMesIntoInteractions();
 	var seqLf : Sequence(Lifeline) = new Sequence(Lifeline);
-	for(ks in map.keySet()){
-		for(mes in map.get(ks)){
-			if(not mes.isReturn() and mes.getReceiveLifeline().isDefined() and 
-				not seqLf.contains(mes.getReceiveLifeline())){
-				seqLf.add(mes.getReceiveLifeline());
-			} 
+	
+	
+	for(keySet in map.keySet()){
+		var seqOfMaps = map.get(keySet);
+		for(seqOfMap in seqOfMaps){
+			var seqComponents = seqOfMap.keySet();
+			for(comp in seqComponents){
+				for(seqMsgs in seqOfMap.get(comp)){
+					for(mes in seqMsgs){
+						if(not mes.isReturn() and mes.getReceiveLifeline().isDefined() and 
+							not seqLf.contains(mes.getReceiveLifeline())){
+								seqLf.add(mes.getReceiveLifeline());
+						} 
+					}
+				}
+			}
 		}
-		
 		if(seqLf.size() >= th_maxRemInst){
 			return true;
 		}
 		seqLf.clear();
 	}
+/*	
+	for(ks in map.keySet()){
+		ks.println();
+		for(m in map.get(ks)){
+			for(mes in ks.get(k)){
+				if(not mes.isReturn() and mes.getReceiveLifeline().isDefined() and 
+					not seqLf.contains(mes.getReceiveLifeline())){
+					seqLf.add(mes.getReceiveLifeline());
+				} 
+			}
+		}*/
+		
+		
 	return false;
 }
 
-operation Component applySessionFacade() : Boolean{
-	var mapIntMes = self.getRemoteMesIntoInteractions();
-	var mapRemCompFacade : Map(Component, List(Component)) = new Map(Component, List(Component));
 
-	for(int in mapIntMes.keySet()){
+operation Component applySessionFacade_StaticView(remoteComp : Component, seqOfMes : Sequence(Message) ) : Sequence(Component) {
+	
+	var twoFacades : Sequence(Component) = new Sequence;
+	
+	//create an interface namely "opFacade"
+	var opRemoteFacadeInterface : Interface = new Interface();
+	self.getNearestPackage().addElement(opRemoteFacadeInterface);
+	var ownedOperation_opFacade : Operation = opRemoteFacadeInterface.createOwnedOperation("opFacade", null, null);
+	
+	opRemoteFacadeInterface.setName("opFacade_Interface");
+	
+	//create 2 components "localFacade" "remoteFacade"
+	
+	var localFacade : Component = self.createNewComponent();
+	var remoteFacade : Component = remoteComp.createNewComponent();
+	
+	localFacade.setName("LocalFacadeWith_"+remoteComp.getName()); 
+	remoteFacade.setName("RemoteFacadeWith_"+ self.getName());
+		
+	//both 2 components implement opFacade interface
+	localFacade.createInterfaceRealization("opFacade_Interface_Realization", opRemoteFacadeInterface);
+	remoteFacade.createInterfaceRealization("opFacade_Interface_Realization", opRemoteFacadeInterface);
+	
+	//both 2 components use opFacade interface 
+	localFacade.createUsage(opRemoteFacadeInterface);
+	remoteFacade.createUsage(opRemoteFacadeInterface);
+	
+	//localFacade provide same interfaces of remoteComp
+	
+	//remoteFacade use remoteComp's provided interfaces
+	
+	for(mes in seqOfMes){
+		var signature = mes.getSignature();
+		var usedInterface = signature.getUsedInterfaces()->first();
+		localFacade.createInterfaceRealization("usedInterface_Realization_"+usedInterface.getName(), usedInterface);
+		remoteFacade.createUsage(usedInterface);
+	}
+	
+	//localFacade as First and remoteFacade as second
+	twoFacades.add(localFacade);
+	twoFacades.add(remoteFacade);
+	twoFacades.add(ownedOperation_opFacade);
+	
+	return twoFacades;
+	
+}
+
+operation Component applySessionFacade_DeploymentView(comp : Component, localFacade : Component, remoteFacade : Component) {
+
+	for(node in self.getNodes()){
+		localFacade.deployOn(node);
+	}
+	for(node in comp.getNodes()){
+		remoteFacade.deployOn(node);
+	} 
+}
+
+operation Component applySessionFacade_DynamicView(remoteComp : Component, localFacade : Component, remoteFacade : Component, seqOfMes : Sequence(Message), opFacade : Operation) {
+	var interaction = seqOfMes->first().getInteraction();
+	
+	var remoteFacadeLf = interaction.createLifelineOf(remoteFacade);
+	var localFacadeLf = interaction.createLifelineOf(localFacade);
+	
+	var remoteCompLf = interaction.getLifelineOf(remoteComp);
+	
+	for(mes in seqOfMes){
+		var receiveEvent = mes.getReceiveEvent();
+		localFacadeLf.getCoveredBys().add(receiveEvent);
+		remoteCompLf.removeInteractionFragment(receiveEvent);
+	}
+	
+	var indexOfLastMes = interaction.getIndexOf(seqOfMes.last().getReceiveEvent());
+	
+	var opFacadeMes = interaction.createMessage("opFacadeMessage");
+	opFacadeMes.setSignature(opFacade);
+	
+	var opFacadeMes_sendMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
+	interaction.addFragmentAt(opFacadeMes_sendMOS, indexOfLastMes+1);
+	var opFacadeMes_receiveMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
+	interaction.addFragmentAt(opFacadeMes_receiveMOS, indexOfLastMes+2);
+	
+	opFacadeMes.setSendEvent(opFacadeMes_sendMOS);
+	opFacadeMes.setReceiveEvent(opFacadeMes_receiveMOS);
+	
+	var besLf : BehaviorExecutionSpecification = new BehaviorExecutionSpecification;
+	besLf.setName(opFacadeMes.getName()+"_BesLifeline");
+	interaction.addFragmentAt(besLf, indexOfLastMes+3);
+	var messageEnd : ExecutionOccurrenceSpecification = new ExecutionOccurrenceSpecification;
+	messageEnd.setName(opFacadeMes.getName()+"_End");
+	interaction.addFragmentAt(messageEnd, indexOfLastMes+4);
+	besLf.start = opFacadeMes.getSendEvent();
+	besLf.finish = messageEnd;
+	
+	localFacadeLf.getCoveredBys().add(besLf);
+	localFacadeLf.getCoveredBys().add(opFacadeMes.getReceiveEvent());
+	localFacadeLf.getCoveredBys().add(messageEnd);
+	interaction.getLifelineOf(self).getCoveredBys().add(opFacadeMes.getSendEvent());
+	
+}
+
+
+operation Component applySessionFacade() : Boolean{
+	var mapIntSeqComp = self.getRemoteMesIntoInteractions();
+	var mapRemCompFacade : Map(Component, List(Component)) = new Map(Component, List(Component));
+	var listOfComponent : Sequence(Component) = new Sequence(Component);
+
+
+	for(int in mapIntSeqComp.keySet()){
+		var seqMapOfCompMsgs = mapIntSeqComp.get(int);
+		for(map in seqMapOfCompMsgs){
+			for(remoteComp in map.keySet()){
+				var seqOfMes = map.get(remoteComp);
+				if(seqOfMes.size() >= th_maxRemMsgs()){ //se supera la guardia allora applico sessionFacade
+					listOfComponent.addAll(self.applySessionFacade_StaticView(remoteComp, seqOfMes));
+					
+					var localFacade = listOfComponent.first();
+					var remoteFacade = listOfComponent.second();
+					self.applySessionFacade_DeploymentView(remoteComp, localFacade, remoteFacade);
+					
+					self.applySessionFacade_DynamicView(remoteComp, localFacade, remoteFacade, seqOfMes, listOfComponent->third());
+					
+				}
+			}
+		}
+	}
+
+
+	/*for(int in mapIntMes.keySet()){
 		for(mes in mapIntMes.get(int)){
 			if(mes.hasStereotype("GaCommStep")){
 				var op = mes.getSignature(); 
-				var comp = op.getClass_(); 
+				var comp = op.getClass_();
+				
 				if(mapRemCompFacade.keySet().isEmpty() or not mapRemCompFacade.containsKey(comp)){
 					var listOfComponent : Sequence(Component) = new Sequence(Component);
-					var localFacade : Component = self.createNewComponent();
-					var remoteFacade : Component = comp.createNewComponent();
-					var opRemoteFacadeInterface : Interface = new Interface();
 					
-					localFacade.setName("LocalFacadeWith_"+comp.getName()); 
-					remoteFacade.setName("RemoteFacadeWith_"+self.getName());
-					remoteFacade.getNearestPackage().addElement(opRemoteFacadeInterface);
-					remoteFacade.getProvideds().add(opRemoteFacadeInterface);
-					opRemoteFacadeInterface.setName("opFacade_Interface");
-					localFacade.getRequireds().add(opRemoteFacadeInterface);
-					localFacade.getProvideds().add(opRemoteFacadeInterface);
-					listOfComponent.add(localFacade);
-					listOfComponent.add(remoteFacade);
+					listOfComponent.addAll(self.applySessionFacade_StaticView(comp));
+					
+					var localFacade = listOfComponent.first();
+					var remoteFacade = listOfComponent.second();
+					
+					self.applySessionFacade_DeploymentView(comp, localFacade, remoteFacade);
 
-					for(node in self.getNodes()){
-						localFacade.deployOn(node);
-					}
-					for(node in comp.getNodes()){
-						remoteFacade.deployOn(node);
-					}
-					var localFacadeLf = int.createLifelineOf(localFacade);
-					var remoteFacadeLf = int.createLifelineOf(remoteFacade);
+					//var localFacadeLf = int.createLifelineOf(localFacade);
+					//var remoteFacadeLf = int.createLifelineOf(remoteFacade);
 					
-					listOfComponent.add(localFacadeLf);
-					listOfComponent.add(remoteFacadeLf);
+					listOfComponent.add(int.createLifelineOf(localFacade));
+					listOfComponent.add(int.createLifelineOf(remoteFacade));
 					
 					mapRemCompFacade.put(comp, listOfComponent);
 				}
 				var localFacade = mapRemCompFacade.get(comp).first();
 				var remoteFacade = mapRemCompFacade.get(comp).second();
-				
 				var listOfUsedInterface = op.getUsedInterfaces(); //interfacce usate da op
-
+				
 				for(interface in listOfUsedInterface){
 					localFacade.allRealizedInterfaces().add(interface);
 					remoteFacade.getAllUsedInterfaces().add(interface);
@@ -604,6 +781,7 @@ operation Component applySessionFacade() : Boolean{
 					
 				var localFacadeLf = mapRemCompFacade.get(comp).third();
 				var remoteFacadeLf = mapRemCompFacade.get(comp).fourth();
+				
 				var besLf : BehaviorExecutionSpecification = new BehaviorExecutionSpecification;
 				var messageEnd : ExecutionOccurrenceSpecification = new ExecutionOccurrenceSpecification;
 
@@ -624,12 +802,13 @@ operation Component applySessionFacade() : Boolean{
 				besLf.finish = messageEnd;
 				localFacadeLf.getCoveredBys().add(besLf);
 				localFacadeLf.getCoveredBys().add(mesSelf2Lf.getReceiveEvent());
-				int.getComponentLifeline(self).getCoveredBys().add(mesSelf2Lf.getSendEvent());
+				self.getName().println();
+				int.getLifelineOf(self).getCoveredBys().add(mesSelf2Lf.getSendEvent());
 				remoteFacadeLf.getCoveredBys().add(mes.getSendEvent());
-				int.getComponentLifeline(self).removeInteractionFragment(mes.getSendEvent());
+				int.getLifelineOf(self).removeInteractionFragment(mes.getSendEvent());
 			}
 		}
-	}	
+	}	*/
 	return false;
 }
 
@@ -654,10 +833,10 @@ operation Component createNewComponent() : Component{
 
 operation Component applyStandardFormat() : Boolean{
 	var mostUsedFormat = self.getTheMostUsedFormat(); //mappa(interaction, map(formato, utilizzo))
-	
 	for(int in mostUsedFormat.keySet()){
 		var stdFormat = mostUsedFormat.get(int).keySet()->first();
-		for(mes in int.getMessageOf(self)){
+		var messagesOfComponent = int.getLifelineOf(self).getIncomingMessages();
+		for(mes in messagesOfComponent){
 			if(mes.hasStereotype("GaEventTrace") and mes.getValue(mes.getStereotype("GaEventTrace"), "format").isDefined())
 				mes.setValue(mes.getStereotype("GaEventTrace"), "format", stdFormat.asString());
 		}
@@ -671,7 +850,9 @@ operation Component getUsedFormat() : Any{
 	var mapUsedFormat : Map(Interaction, Map);
 	
 	for(int in listOfInteraction){
-		var listOfMes = int.getMessageOf(self);
+		var selfLf : Lifeline = int.getLifelineOf(self);
+		var listOfMes = selfLf.getIncomingMessages();
+		//var listOfMes = int.getMessageOf(self);
 		for(mes in listOfMes){
 			if(mes.hasStereotype("GaEventTrace") and mes.getValue(mes.getStereotype("GaEventTrace"), "format").isDefined() ){
 				if( mapFormatTypeUsage.isEmpty() or 
@@ -684,7 +865,7 @@ operation Component getUsedFormat() : Any{
 				}
 			}
 		}
-		if(not mapFormatTypeUsage.isEmpty())
+		if(not mapFormatTypeUsage.isEmpty() )
 			mapUsedFormat.put(int, mapFormatTypeUsage);
 	}
 	return mapUsedFormat;
@@ -740,12 +921,12 @@ operation Component reduceNumberOfClientConnects() : Boolean{
 	}
 }
 
-operation Component createNewInterfaceRealization() :InterfaceRealization{
+operation Component createNewInterfaceRealization() : InterfaceRealization{
 	var newInt : InterfaceRealization = new  InterfaceRealization();
 	var selfPackage = self.getNearestPackage();
 	
 	selfPackage.addElement(newInt);	
-	self.getInterfaceRealization().add(newInt);
+	self.getInterfaceRealizations().add(newInt);
 	return newInt;
 }
 
@@ -760,7 +941,7 @@ operation Component createNewOperation(op : Operation) : Operation{
 
 operation Component deleteOperation(op : Operation) : Boolean{
 	if(not self.getOperations()->exists(o | o == op)){
-		"there was an error!!!".errln("[[ Method: deleteOperation(Operation) in component.eol ]]");
+		"[[ Method: deleteOperation(Operation) in component.eol ]]".errln("There was an error!!! ");
 		return false;
 	}
 	op.destroy();

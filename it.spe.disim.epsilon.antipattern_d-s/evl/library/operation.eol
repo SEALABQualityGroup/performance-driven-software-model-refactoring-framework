@@ -150,10 +150,11 @@ operation Operation getUsages() : List(Usage){
 
 operation Operation getUsedInterfaces() : Sequence(Interface){
 	var usages = self.getUsages();	
+	usages.println();
 	var returnValue : Sequence(Interface) = new Sequence(Interface);
 	for(usage in usages){
-		if(usage.getClients()->exists(cli | cli.getOwner().isTypeOf(Interface))){
-			returnValue.add(usage.getClients()->selectOne(cli | cli.getOwner().isTypeOf(Interface)).getOwner());
+		if(usage.getSuppliers()->exists(cli | cli.isTypeOf(Interface))){
+			returnValue.add(usage.getSuppliers()->selectOne(cli | cli.isTypeOf(Interface)));
 		}
 	}	
 	return returnValue;
@@ -678,7 +679,7 @@ operation Operation decomposition(){
 	var listOfInteraction = self.getAllInteractions();
 	//check di controllo
 	if(listOfInteraction.isEmpty()){
-		"there was an error!!!".errln();
+		"[[ Method: decomposition() in operation.eol ]] ".errln("There was an error!!!" );
 		return null;
 	}
 	
@@ -706,7 +707,7 @@ operation Operation decomposition(){
 			
 			var ownerLifeline = owner.getLifeline(interaction);
 			if(ownerLifeline.isUndefined()){
-				"[decomposition() in operation.eol]".errln("there was an error!!!" );
+				"[[ Method: decomposition() in operation.eol ]] ".errln("There was an error!!! ");
 				return 0;
 			}
 			ownerLifeline.getCoveredBys().add(sendEvent);			

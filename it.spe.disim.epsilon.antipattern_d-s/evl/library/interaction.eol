@@ -57,6 +57,10 @@ operation Interaction getClassifierLifeline(classifier : Classifier) : Lifeline{
 	}
 }
 
+/*
+
+********** Must be used getLifelineOf(type) ***************
+ 
 operation Interaction getComponentLifeline(component : Component) : Lifeline{
 	for(lf in self.getLifelines()){
 		var represents = lf.getRepresents();
@@ -65,7 +69,7 @@ operation Interaction getComponentLifeline(component : Component) : Lifeline{
 				return lf;
 	}
 	return null;
-}
+}*/
 
 operation Interaction getClassLifeline(class : Class) : Lifeline{
 	var lifelines = Lifeline.allInstances->select(lf | lf.getInteraction() == self);
@@ -81,17 +85,31 @@ operation Interaction getUseCase() : UseCase{
 
 
 //messaggi in uscita da una lifeline
-operation Interaction getMessageOf(component : Component) : Sequence(Message){
+operation Interaction getOutcomingMessageOf(component : Component) : Sequence(Message){
 	var returnValue : Sequence(Message) = new Sequence(Message);
 	var componentLf = component.getLifeline(self);
 	if(componentLf.isUndefined()){
-		" [getMessageOf() in interaction.eol]".errln("There was an error!!!");
+		"[[ Method: getMessageOf() in interaction.eol ]]".errln("There was an error!!! ");
 		return null;
 	}
-	
-	for (mes in self.getMessages()) { 
-		
-		if( componentLf.getCoveredBys()->exists(iterator | iterator == mes.getSendEvent()) ){
+	for (mes in self.getMessages()) {
+		if(not mes.isReturn() and componentLf.getCoveredBys()->exists(iterator | iterator == mes.getSendEvent())){
+			returnValue.add(mes);
+		}
+	}
+	return returnValue;
+}
+
+//messaggi in entrata ad una lifeline
+operation Interaction getIncomingMessageOf(component : Component) : Sequence(Message){
+	var returnValue : Sequence(Message) = new Sequence(Message);
+	var componentLf = component.getLifeline(self);
+	if(componentLf.isUndefined()){
+		"[[ Method: getMessageOf() in interaction.eol ]]".errln("There was an error!!! ");
+		return null;
+	}
+	for (mes in self.getMessages()) {
+		if(not mes.isReturn() and componentLf.getCoveredBys()->exists(iterator | iterator == mes.getReceiveEvent())){
 			returnValue.add(mes);
 		}
 	}
@@ -119,6 +137,11 @@ operation Interaction getLifeline(mos : MessageOccurrenceSpecification) : Lifeli
 			return lf;
 	}
 	return null;*/
+}
+
+operation Interaction getLifelineOf(component : Component) : Lifeline {
+	return Lifeline.allInstances->selectOne(lf | lf.namespace == self and 
+			lf.getRepresents().getType() == component);
 }
 
 operation Interaction createLifelineOf(component : Component) : Lifeline {
