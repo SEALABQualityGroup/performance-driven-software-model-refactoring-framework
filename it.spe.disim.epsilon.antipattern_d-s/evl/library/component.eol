@@ -733,7 +733,10 @@ operation Component applySessionFacade_DynamicView(remoteComp : Component, local
 
 //building messages from remote facade to remote component 
 	for(mes in seqOfMes){
-		var newMes = interaction.createMessage(mes.getName());
+	
+		var newMes = interaction.createMessage(remoteFacadeLf, remoteCompLf, mes.getSignature());
+		
+		/*var newMes = interaction.createMessage(mes.getName());
 		newMes.setSignature(mes.getSignature());
 		 
 		var newMes_sendMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
@@ -762,6 +765,7 @@ operation Component applySessionFacade_DynamicView(remoteComp : Component, local
 		newMes_besLf.start = newMes.getSendEvent();
 		newMes_besLf.finish = newMes_eos;
 		remoteCompLf.getCoveredBys().add(newMes_eos);
+*/
 	}
 //building messages from remote facade to remote component
 
@@ -772,7 +776,6 @@ operation Component applySessionFacade() : Boolean{
 	var mapIntSeqComp = self.getRemoteMesIntoInteractions();
 	var mapRemCompFacade : Map(Component, List(Component)) = new Map(Component, List(Component));
 	var listOfComponent : Sequence(Component) = new Sequence(Component);
-
 
 	for(int in mapIntSeqComp.keySet()){
 		var seqMapOfCompMsgs = mapIntSeqComp.get(int);
@@ -792,71 +795,6 @@ operation Component applySessionFacade() : Boolean{
 			}
 		}
 	}
-
-
-	/*for(int in mapIntMes.keySet()){
-		for(mes in mapIntMes.get(int)){
-			if(mes.hasStereotype("GaCommStep")){
-				var op = mes.getSignature(); 
-				var comp = op.getClass_();
-				
-				if(mapRemCompFacade.keySet().isEmpty() or not mapRemCompFacade.containsKey(comp)){
-					var listOfComponent : Sequence(Component) = new Sequence(Component);
-					
-					listOfComponent.addAll(self.applySessionFacade_StaticView(comp));
-					
-					var localFacade = listOfComponent.first();
-					var remoteFacade = listOfComponent.second();
-					
-					self.applySessionFacade_DeploymentView(comp, localFacade, remoteFacade);
-
-					//var localFacadeLf = int.createLifelineOf(localFacade);
-					//var remoteFacadeLf = int.createLifelineOf(remoteFacade);
-					
-					listOfComponent.add(int.createLifelineOf(localFacade));
-					listOfComponent.add(int.createLifelineOf(remoteFacade));
-					
-					mapRemCompFacade.put(comp, listOfComponent);
-				}
-				var localFacade = mapRemCompFacade.get(comp).first();
-				var remoteFacade = mapRemCompFacade.get(comp).second();
-				var listOfUsedInterface = op.getUsedInterfaces(); //interfacce usate da op
-				
-				for(interface in listOfUsedInterface){
-					localFacade.allRealizedInterfaces().add(interface);
-					remoteFacade.getAllUsedInterfaces().add(interface);
-				}
-					
-				var localFacadeLf = mapRemCompFacade.get(comp).third();
-				var remoteFacadeLf = mapRemCompFacade.get(comp).fourth();
-				
-				var besLf : BehaviorExecutionSpecification = new BehaviorExecutionSpecification;
-				var messageEnd : ExecutionOccurrenceSpecification = new ExecutionOccurrenceSpecification;
-
-				int.getFragments().add(besLf);
-				besLf.setName("BesLifeline");
-				int.getFragments().add(messageEnd);
-				messageEnd.setName(mes.getName()+"_End");
-				
-				var mesSelf2Lf = int.createMessage(mes.getName());
-				var sendMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
-				var receiveMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
-
-				int.getFragments().add(sendMOS);
-				int.getFragments().add(receiveMOS);
-				mesSelf2Lf.setSendEvent(sendMOS);
-				mesSelf2Lf.setReceiveEvent(receiveMOS);
-				besLf.start = mesSelf2Lf.getSendEvent();
-				besLf.finish = messageEnd;
-				localFacadeLf.getCoveredBys().add(besLf);
-				localFacadeLf.getCoveredBys().add(mesSelf2Lf.getReceiveEvent());
-				self.getName().println();
-				int.getLifelineOf(self).getCoveredBys().add(mesSelf2Lf.getSendEvent());
-				remoteFacadeLf.getCoveredBys().add(mes.getSendEvent());
-				int.getLifelineOf(self).removeInteractionFragment(mes.getSendEvent());
-			}
-		}
-	}	*/
 	return false;
 }
 

@@ -198,7 +198,7 @@ context Component {
  *																							 *
  *	 								Empty Semi Truck										 *
  *							Antipattern Detection and Validation							 *
- *																							 *
+ *										reviewed											 *
  *********************************************************************************************/
  context Component {
  	critique EmptySemiTruck{

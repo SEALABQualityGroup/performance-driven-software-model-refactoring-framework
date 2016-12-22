@@ -161,3 +161,40 @@ operation Interaction createLoopFragmentAt(index : Integer) : CombinedFragment{
 	return loopFragment;
 }
 
+operation Interaction createMessage(from : Lifeline, to : Lifeline, signature : Operation) : Message{
+	var mes = self.createMessage(signature.getName());
+	mes.setSignature(signature);
+	
+	var mes_sendMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
+	self.getFragments().add(mes_sendMOS);
+	mes_sendMOS.setName(mes.getName()+"__sendMOS");
+	mes_sendMOS.setMessage(mes);
+	mes.setSendEvent(mes_sendMOS);
+	from.getCoveredBys().add(mes.getSendEvent());
+	
+	var mes_receiveMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
+	self.getFragments().add(mes_receiveMOS);
+	mes_receiveMOS.setName(mes.getName()+"__receiveMOS");
+	mes_receiveMOS.setMessage(mes);
+	mes.setReceiveEvent(mes_receiveMOS);
+	to.getCoveredBys().add(mes.getReceiveEvent());
+	
+	var mes_besLf : BehaviorExecutionSpecification = new BehaviorExecutionSpecification;
+	mes_besLf.setName(mes.getName()+"__bes");
+	self.getFragments().add(mes_besLf);
+	to.getCoveredBys().add(mes_besLf);
+	
+	var mes_eos : ExecutionOccurrenceSpecification = new ExecutionOccurrenceSpecification;
+	mes_eos.setName(mes.getName()+"__eos");
+	mes_eos.setExecution(mes_besLf);
+	self.getFragments().add(mes_eos);
+	mes_besLf.start = mes.getSendEvent();
+	mes_besLf.finish = mes_eos;
+	to.getCoveredBys().add(mes_eos);
+
+	return mes;
+}
+
+
+
+
