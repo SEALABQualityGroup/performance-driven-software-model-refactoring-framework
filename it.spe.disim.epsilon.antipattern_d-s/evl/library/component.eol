@@ -236,7 +236,8 @@ operation Component deployOn(node : Node){
 	node.getNearestPackage().addElement(newArtifact); 
 	newArtifact.name = self.name; 
 	
-	newManifestation = newArtifact.createManifestation(self.name, self); 
+	newManifestation = newArtifact.createManifestation(self.name, self);
+	newManifestation.getClients().add(newArtifact); 
 	newDeployment = node.createDeployment(newArtifact.name); 
 	newDeployment.getDeployedArtifacts().add(newArtifact);
 }
@@ -686,37 +687,84 @@ operation Component applySessionFacade_DynamicView(remoteComp : Component, local
 	
 	for(mes in seqOfMes){
 		var receiveEvent = mes.getReceiveEvent();
+		var bes_event = mes.getBES();
+		var eos_event = bes_event.getFinish();
 		localFacadeLf.getCoveredBys().add(receiveEvent);
+		localFacadeLf.getCoveredBys().add(bes_event);
+		localFacadeLf.getCoveredBys().add(eos_event);
 		remoteCompLf.removeInteractionFragment(receiveEvent);
+		remoteCompLf.removeInteractionFragment(bes_event);
+		remoteCompLf.removeInteractionFragment(eos_event);
 	}
 	
 	var indexOfLastMes = interaction.getIndexOf(seqOfMes.last().getReceiveEvent());
 	
+//building a new message
 	var opFacadeMes = interaction.createMessage("opFacadeMessage");
 	opFacadeMes.setSignature(opFacade);
 	
 	var opFacadeMes_sendMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
 	interaction.addFragmentAt(opFacadeMes_sendMOS, indexOfLastMes+1);
+	opFacadeMes_sendMOS.setName(opFacadeMes.getName()+"_sendMOS");
+	opFacadeMes_sendMOS.setMessage(opFacadeMes);
 	var opFacadeMes_receiveMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
 	interaction.addFragmentAt(opFacadeMes_receiveMOS, indexOfLastMes+2);
+	opFacadeMes_receiveMOS.setName(opFacadeMes.getName()+"_receiveMOS");
+	opFacadeMes_receiveMOS.setMessage(opFacadeMes);
 	
 	opFacadeMes.setSendEvent(opFacadeMes_sendMOS);
 	opFacadeMes.setReceiveEvent(opFacadeMes_receiveMOS);
 	
 	var besLf : BehaviorExecutionSpecification = new BehaviorExecutionSpecification;
-	besLf.setName(opFacadeMes.getName()+"_BesLifeline");
+	besLf.setName(opFacadeMes.getName()+"_bes");
 	interaction.addFragmentAt(besLf, indexOfLastMes+3);
 	var messageEnd : ExecutionOccurrenceSpecification = new ExecutionOccurrenceSpecification;
-	messageEnd.setName(opFacadeMes.getName()+"_End");
+	messageEnd.setName(opFacadeMes.getName()+"_eos");
+	messageEnd.setExecution(besLf);
 	interaction.addFragmentAt(messageEnd, indexOfLastMes+4);
 	besLf.start = opFacadeMes.getSendEvent();
 	besLf.finish = messageEnd;
 	
-	localFacadeLf.getCoveredBys().add(besLf);
-	localFacadeLf.getCoveredBys().add(opFacadeMes.getReceiveEvent());
-	localFacadeLf.getCoveredBys().add(messageEnd);
-	interaction.getLifelineOf(self).getCoveredBys().add(opFacadeMes.getSendEvent());
-	
+	remoteFacadeLf.getCoveredBys().add(besLf);
+	remoteFacadeLf.getCoveredBys().add(opFacadeMes.getReceiveEvent());
+	remoteFacadeLf.getCoveredBys().add(messageEnd);
+	localFacadeLf.getCoveredBys().add(opFacadeMes.getSendEvent());
+//bulding a new message
+
+//building messages from remote facade to remote component 
+	for(mes in seqOfMes){
+		var newMes = interaction.createMessage(mes.getName());
+		newMes.setSignature(mes.getSignature());
+		 
+		var newMes_sendMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
+		interaction.addFragmentAt(newMes_sendMOS, indexOfLastMes+1);
+		newMes_sendMOS.setName(newMes.getName()+"__sendMOS");
+		newMes_sendMOS.setMessage(newMes);
+		newMes.setSendEvent(newMes_sendMOS);
+		remoteFacadeLf.getCoveredBys().add(newMes.getSendEvent());
+		
+		var newMes_receiveMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
+		interaction.addFragmentAt(newMes_receiveMOS, indexOfLastMes+2);
+		newMes_receiveMOS.setName(newMes.getName()+"__receiveMOS");
+		newMes_receiveMOS.setMessage(newMes);
+		newMes.setReceiveEvent(newMes_receiveMOS);
+		remoteCompLf.getCoveredBys().add(newMes.getReceiveEvent());
+		
+		var newMes_besLf : BehaviorExecutionSpecification = new BehaviorExecutionSpecification;
+		newMes_besLf.setName(newMes.getName()+"__bes");
+		interaction.getFragments().add(newMes_besLf);
+		remoteCompLf.getCoveredBys().add(newMes_besLf);
+		
+		var newMes_eos : ExecutionOccurrenceSpecification = new ExecutionOccurrenceSpecification;
+		newMes_eos.setName(newMes.getName()+"__eos");
+		newMes_eos.setExecution(newMes_besLf);
+		interaction.getFragments().add(newMes_eos);
+		newMes_besLf.start = newMes.getSendEvent();
+		newMes_besLf.finish = newMes_eos;
+		remoteCompLf.getCoveredBys().add(newMes_eos);
+	}
+//building messages from remote facade to remote component
+
 }
 
 

@@ -20,3 +20,14 @@ operation Message getUseCase() : UseCase{
 	returnValue = self.getInteraction().getUseCase();
 	return returnValue;
 }
+
+
+operation Message getBES() : BehaviorExecutionSpecification{
+	var bes;
+	
+	var mos_receive = self.getReceiveEvent();
+	
+	bes = BehaviorExecutionSpecification.allInstances->selectOne(iterator | iterator.getStart() == mos_receive);
+	
+	return bes;
+}
