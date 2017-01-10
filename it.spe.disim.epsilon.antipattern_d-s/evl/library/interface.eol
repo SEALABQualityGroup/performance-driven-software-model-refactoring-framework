@@ -8,3 +8,15 @@ operation InterfaceRealization cloneInterfaceRealization() : InterfaceRealizatio
 	
 	return newRealization;
 }
+
+
+operation Interface getRealizedBy() : Sequence(Operation){
+	return Operation.allInstances->select( 
+		op | op.getUsages()->exists( usage | usage.getSuppliers()->exists(int | int == self) ) );
+}
+
+operation Interface getUsedBy() : Sequence(Component){
+	return Component.allInstances->select( 
+		comp | comp.getUsedInterfaces()->exists( int | int == self ) 
+	);
+}

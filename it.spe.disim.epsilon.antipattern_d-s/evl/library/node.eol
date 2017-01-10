@@ -303,10 +303,10 @@ operation Node getLessUsedNode() : Node{
 operation Node getNetworkUsage() : Map{
 	var networkUsage : Map(CommunicationPath, Sequence(Real)) = new Map(CommunicationPath, Sequence(Real));
 	for(cp in self.getCommunicationPaths()){
-		if(cp.hasStereotype("GaCommHost")){
-			var netUsage = cp.getValue(cp.getStereotype("GaCommHost"),"utilization");
+		if(cp.hasStereotype("GaCommChannel")){
+			var netUsage = cp.getValue(cp.getStereotype("GaCommChannel"),"utlization");  //error in magicDraw's exporting
 			if(netUsage.isDefined())
-				networkUsage.put(cp, cp.getValue(cp.getStereotype("GaCommHost"),"utilization").asSequence());
+				networkUsage.put(cp, cp.getValue(cp.getStereotype("GaCommChannel"),"utlization").asSequence());
 		}
 	}
 	return networkUsage;

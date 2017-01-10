@@ -71,6 +71,8 @@ operation Component F_numClientConnects(th_maxConnects : Integer) : Boolean{
 	if(not self.hasStereotype("PaRunTInstance")) 
 		return false;
 
+	(self.getName()+" -> "+self.getRequireds().size()).println();
+
    	if(self.getRequireds().size() >= th_maxConnects){
 		return true;
 	}
@@ -79,14 +81,13 @@ operation Component F_numClientConnects(th_maxConnects : Integer) : Boolean{
 
 operation Component F_numMsgsIn(th_maxMsgs : Integer) : Boolean{
 	
-	//finds the list of critical messages into every interactions, which own the critical component	
-	if(not self.getCriticalMessages4BlobControllerAP(th_maxMsgs).isEmpty())
+	if(self.getCriticalLifeline4BlobContainerAP(th_maxMsgs).notEmpty())
 		return true;
 	return false;
 }
 
 operation Component F_numMsgsOut(th_maxMsgs : Integer) : Boolean{
-	if(not self.getCriticalLifeline4BlobContainerAP(th_maxMsgs).isEmpty())
+	if(self.getCriticalLifeline4BlobControllerAP(th_maxMsgs).notEmpty())
 		return true;
 	return false;
 }
@@ -95,9 +96,12 @@ operation Component F_numSupplierConnects(th_maxConnects : Integer) : Boolean{
 
 	if(not self.hasStereotype("PaRunTInstance")) 
 		return false;
+	
+	(self.getName()+" -> "+self.getProvideds().size()).println();
 
-	if(self.getProvideds().size() >= th_maxConnects)
+	if(self.getProvideds().size() >= th_maxConnects)	
 		return true;
+		
 	return false;
 }
 
@@ -395,6 +399,7 @@ operation Node F_maxHwUtil(th_maxHwUtil : Real) : Boolean {
 }
 
 operation Component F_maxHwUtil(th_maxHwUtil : Real) : Boolean{
+
 	if(not self.getNodesWithUtilizationGreaterThan(th_maxHwUtil).isEmpty())
 		return true;
 	return false;	

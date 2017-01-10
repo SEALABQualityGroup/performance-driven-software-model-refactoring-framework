@@ -45,10 +45,10 @@ operation Lifeline getIncomingMessages() : List(Message){
 	return messages->select(m : Message | self.getCoveredBys()->exists(mo : MessageOccurrenceSpecification | mo = m.receiveEvent)).asSequence();
 }
 
-operation Lifeline getOutgoingMessages() : List(Message){
+operation Lifeline getOutgoingMessages() : Sequence(Message){
 	var messages = self.getInteraction().getMessages(); 
 	
-	return messages->select(m : Message | self.getCoveredBys()->exists(mo : InteractionFragment | mo = m.sendEvent));
+	return messages->select(m : Message | self.getCoveredBys()->exists(mo : InteractionFragment | mo = m.sendEvent)).asSequence();
 }
 
 operation Lifeline getNextIncomingMessage(mes : Message) : Message{

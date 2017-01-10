@@ -23,11 +23,13 @@ operation Message getUseCase() : UseCase{
 
 
 operation Message getBES() : BehaviorExecutionSpecification{
-	var bes;
-	
 	var mos_receive = self.getReceiveEvent();
-	
-	bes = BehaviorExecutionSpecification.allInstances->selectOne(iterator | iterator.getStart() == mos_receive);
-	
+	var bes = BehaviorExecutionSpecification.allInstances->selectOne(iterator | iterator.getStart() == mos_receive);
 	return bes;
+}
+
+operation Message getEOS() : ExecutionOccurrenceSpecification{
+	var bes = self.getBES();
+	var eos = bes.getFinish();
+	return eos;
 }

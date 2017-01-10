@@ -151,22 +151,28 @@ import "library/package.eol";
  *																							 *
  *								Blob Controller & Container									 *
  *							Antipattern Detection and Validation							 *
- *																							 *
+ *										reviewed 											 *
  *********************************************************************************************/
 
-/*context Component {
+
+context Component {
 	critique Blob_Controller {
 		check {
-			if( self.F_numClientConnects(th_maxConnects()) and self.F_numMsgsIn(th_maxMsgs()) and 
-				(self.F_maxHwUtil(th_maxHwUtil()) or self.F_maxNetUtil(th_maxNetUtil()))
+			if( self.F_numClientConnects(th_maxConnects()) and self.F_numMsgsOut(th_maxMsgs()) and 
+				( self.F_maxHwUtil(th_maxHwUtil()) or self.F_maxNetUtil(th_maxNetUtil()) )
 			)
 				return false;
 			return true;
 		}
 		message : "Blob Controller <" + self.type.name + "> " + self.name
+		fix{
+			title : "Redeploy its owning Component "+self.name+" to the less used neighbour Node"
+			do{
+				self.redeployOnNearLessUsedNode();
+			}
+		}
 		fix {
-			title: "Reduce Client Connects <"+ self.name +">"
-			
+			title: "Reduce Client Connects <" + self.name + ">"
 			do {
 				self.reduceNumberOfClientConnects(th_maxConnects());
 			}
@@ -177,21 +183,27 @@ import "library/package.eol";
 context Component {
 	critique Blob_dataContainer {
 		check {
-			if( self.F_numSupplierConnects(th_maxConnects()) and self.F_numMsgsOut(th_maxMsgs()) and 
+			if( self.F_numSupplierConnects(th_maxConnects()) and self.F_numMsgsIn(th_maxMsgs()).println() and 
 				( self.F_maxHwUtil(th_maxHwUtil()) or self.F_maxNetUtil(th_maxNetUtil()) )
 			)
 				return false;
 			return true;
 		}
 		message : "Blob Container <" + self.type.name + "> " + self.name
+		fix{
+			title : "Redeploy its owning Component "+self.name+" to the less used neighbour Node"
+			do{
+				self.redeployOnNearLessUsedNode();
+			}
+		}
 		fix {
 			title: "Reduce Supplier Connects of <"+ self.name +">"
 			do{
-				self.reduceNumberOfSupplierConnects();
+				self.reduceNumberOfSupplierConnects(th_maxConnects());
 			}
 		}
 	}
-}*/
+}
 
 
 /*********************************************************************************************
@@ -200,7 +212,7 @@ context Component {
  *							Antipattern Detection and Validation							 *
  *										reviewed											 *
  *********************************************************************************************/
- context Component {
+ /*context Component {
  	critique EmptySemiTruck{
  		check{
  			if(self.F_numRemMsgs(th_maxRemMsgs()) and 
@@ -217,7 +229,7 @@ context Component {
 			}
 		}
  	}
-}
+}*/
 
 /*********************************************************************************************
  *																							 *

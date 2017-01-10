@@ -65,7 +65,7 @@ operation Component getAllUsedIntefacesProvidedsBy (op : Operation) : List(Inter
 	//le sole interfacce utilizzate dall'operzione critica
 	for(proInterface in returnValue){
 		for(usage in listOfUsage){
-			if(usage.supplier->first() <> self and usage.client->first == proInterface){
+			if(usage.supplier->first() <> self and usage.client->first() == proInterface){
 				returnValue.remove(proInterface);
 			}
 		}
@@ -361,7 +361,7 @@ operation Component getSendingMessages() : Integer{
 	}
 }
 
-operation Component getCriticalMessages4BlobControllerAP(th_maxMsgs : Integer) : Map {
+/*operation Component getCriticalMessages4BlobControllerAP(th_maxMsgs : Integer) : Map {
 	var lifelines = self.getLifelines();
 	var lfMap : Map(Lifeline, BehaviorExecutionSpecificaiton) = new Map(Lifeline, BehaviorExecutionSpecification);
 	var count : Integer = 0;
@@ -393,23 +393,40 @@ operation Component getCriticalMessages4BlobControllerAP(th_maxMsgs : Integer) :
 	} 
 	
 	return lfMap;
+}*/
+
+operation Component getCriticalLifeline4BlobContainerAP(th_maxMsgs : Integer) : Sequence(Lifeline){
+	var returnValue : Sequence(Lifeline) = new Sequence(Lifeline);
+	var lifelines = self.getLifelines();
+	
+	for(lf in lifelines){
+		var incomingMsgs = lf.getIncomingMessages();
+
+		if(incomingMsgs.size() >= th_maxMsgs)
+			returnValue.add(lf);
+	}
+	
+	return returnValue;
 }
 
-operation Component getCriticalOperations4BlobControllerAP(th_maxMsgs : Integer) : Sequence(Operation){
+/*operation Component getCriticalOperations4BlobControllerAP(th_maxMsgs : Integer) : Sequence(Operation){
 	var returnValue : Sequence(Operation) = new Sequence(Operation);
 	
 	for(msg in self.getCriticalMessages4BlobControllerAP(th_maxMsgs)){
 		returnValue.add(msg.getSignature());
 	}
 	return returnValue;
-}
+}*/
 
-operation Component getCriticalLifeline4BlobContainerAP(th_maxMsgs : Integer) : Sequence(Lifeline){
+operation Component getCriticalLifeline4BlobControllerAP(th_maxMsgs : Integer) : Sequence(Lifeline){
 	var returnValue : Sequence(Lifeline) = new Sequence(Lifeline);
 	var lifelines = self.getLifelines();
+	"bongo".println();
 	for(lf in lifelines){
-		var beses = lf.getBESes();
-		if(beses.size() >= th_maxMsgs){
+		
+		var outgoingMsgs = lf.getOutgoingMessages();
+		
+		if(outgoingMsgs.size() >= th_maxMsgs){
 			returnValue.add(lf);
 		}
 	}
@@ -882,7 +899,7 @@ operation Map getMostUsed() : Map {
 	return mapFormat;
 }
 
-operation Component reduceNumberOfSupplierConnects() : Boolean{
+/*operation Component reduceNumberOfSupplierConnects() : Boolean{
 	var listOfOperations = self.getOperations();
 	
 	while(self.getOperations().size() > th_maxConnects){
@@ -894,16 +911,153 @@ operation Component reduceNumberOfSupplierConnects() : Boolean{
 			}
 		}
 	}
+}*/
+
+operation Component reduceNumberOfSupplierConnects(th_maxConnects : Real) : Boolean{
+	var listOfOperations = self.getOperations();
+	
+	var listOfInterfaces = self.getProvideds();
+	
+	var count = self.getProvideds().size();
+	
+	var i : Integer = 0;
+	while( count >= th_maxConnects){
+			var usedInt = listOfInterfaces->at(i);
+			
+			
+			var value = usedInt.getUsedBy();
+			
+			"######".println();
+			usedInt.println();
+			self.println();
+			value.println();
+			"######".println();
+
+			if(value.notEmpty()){
+				value->first().createInterfaceRealization(usedInt.getName(), usedInt);
+				
+				var intReal = InterfaceRealization.allInstances->selectOne(ir | 
+					ir.getSuppliers()->exists(sup | sup = usedInt) and
+						ir.getClients()->exists(cli | cli = self)
+				);
+				
+				intReal.destroy();
+				
+				var usage = Usage.allInstances->selectOne(usg | 
+					usg.getSuppliers()->exists(sup | sup = usedInt) and
+						usg.getClients()->exists(cli | cli = value->first())
+				);
+				
+				usage.destroy();
+				
+				if(usedInt.getRealizedBy()->isEmpty())
+					return null;	
+				
+				var op = usedInt.getRealizedBy()->first();
+				
+				var interactions = op.getAllInteractions()->select(
+					int | int.hasComponent(self) and int.hasComponent(value->first()) 
+				);
+				
+				"*******".println();
+				interactions.println();
+				"*******".println();
+				
+				for(int in interactions){
+					
+					var msgs = int.getIncomingMessageOf(self)->select(
+						m | op.getMessagesIn(int)->exists(mes | mes = m)
+					);
+					
+					for(msg in msgs){
+						var mosSend = msg.getSendEvent();
+						mosSend.println();
+						var mosReceive = msg.getReceiveEvent();
+						var bes = msg.getBES();
+						var eos = msg.getEOS();
+						
+						var selfLifeline = int.getLifelineOf(self);
+						var senderLifeline = mosSend.getCovereds()->first();
+						
+						senderLifeline.getCoveredBys().add(mosReceive);
+						senderLifeline.getCoveredBys().add(bes);
+						senderLifeline.getCoveredBys().add(eos);
+						
+						selfLifeline.getCoveredBys().remove(mosReceive);
+						selfLifeline.getCoveredBys().remove(bes);
+						selfLifeline.getCoveredBys().remove(eos);
+					}
+				}
+				
+				self.moveOperation(op);
+			}
+		i = i+1;
+		count = count - 1;
+	}
 }
 
-operation Component reduceNumberOfClientConnects() : Boolean{
+operation Component reduceNumberOfClientConnects(th_maxConnects : Real) : Boolean{
 	var listOfUsedInterfaces = self.getRequireds();
 	
-	while(self.getRequireds().size > th_maxConnects){
-		for(usedInt in listOfUsedInterfaces){
-			var opOfUsedInt = usedInt.getOperation();
-			self.moveInto(opOfUsedInt);
-		}
+	var count = self.getRequireds().size();
+	
+	var i : Integer = 0;
+	while( count >= th_maxConnects){
+			var usedInt = listOfUsedInterfaces->at(i);
+			
+			var value = usedInt.getRealizedBy();
+
+			if(value.notEmpty()){
+				self.createInterfaceRealization(usedInt.getName(), usedInt);
+				
+				var intReal = InterfaceRealization.allInstances->selectOne(ir | 
+					ir.getSuppliers()->exists(sup | sup = usedInt) and
+						ir.getClients()->exists(cli | cli = value->first().getClass_())
+				);
+				
+				intReal.destroy();
+				
+				var usage = Usage.allInstances->selectOne(usg | 
+					usg.getSuppliers()->exists(sup | sup = usedInt) and
+						usg.getClients()->exists(cli | cli = self)
+				);
+				
+				usage.destroy();
+				
+				var op = value->first();
+				
+				var interactions = op.getAllInteractions()->select(
+					int | int.hasComponent(self) and int.hasComponent(op.getClass_()) 
+				);
+				
+				for(int in interactions){
+					
+					var msgs = int.getOutcomingMessageOf(self)->select(
+						m | op.getMessagesIn(int)->exists(mes | mes = m)
+					);
+					
+					for(msg in msgs){
+						var mosReceive = msg.getReceiveEvent();
+						var bes = msg.getBES();
+						var eos = msg.getEOS();
+						
+						var selfLifeline = int.getLifelineOf(self);
+						var recipientLifeline = int.getLifelineOf(op.getClass_());
+						
+						selfLifeline.getCoveredBys().add(mosReceive);
+						selfLifeline.getCoveredBys().add(bes);
+						selfLifeline.getCoveredBys().add(eos);
+						
+						recipientLifeline.getCoveredBys().remove(mosReceive);
+						recipientLifeline.getCoveredBys().remove(bes);
+						recipientLifeline.getCoveredBys().remove(eos);
+					}
+				}
+				
+				self.moveOperation(op);
+			}
+		i = i+1;
+		count = count - 1;
 	}
 }
 

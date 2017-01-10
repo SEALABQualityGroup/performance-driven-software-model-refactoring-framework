@@ -144,6 +144,13 @@ operation Interaction getLifelineOf(component : Component) : Lifeline {
 			lf.getRepresents().getType() == component);
 }
 
+operation Interaction getLifelineOf(component : Any) : Lifeline {
+	"%%%%%%%".println();
+	component.println();
+	return Lifeline.allInstances->selectOne(lf | lf.namespace == self and 
+			lf.getRepresents().getType().println() == component);
+}
+
 operation Interaction createLifelineOf(component : Component) : Lifeline {
 	var lifeline = self.createLifeline(component.getName()+"_Lifeline");
 	var componentRepresents = self.createOwnedAttribute(component.getName(), component);

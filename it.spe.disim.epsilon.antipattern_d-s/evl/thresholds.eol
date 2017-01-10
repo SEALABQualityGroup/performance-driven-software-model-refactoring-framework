@@ -46,7 +46,7 @@ operation th_maxHwUtil() : Real{
 
 operation th_maxNetUtil() : Real{	
 	//Network utilization
-	var th_maxNetUtil : Real = 0.9;
+	var th_maxNetUtil : Real = 0.65;
 	return th_maxNetUtil;
 }
 
