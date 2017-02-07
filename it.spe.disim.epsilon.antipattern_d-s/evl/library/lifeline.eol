@@ -33,22 +33,64 @@ operation Lifeline removeCovered(fragment : InteractionFragment){
 	self.getCoveredBys().remove(fragment);
 }
 
-/*operation Lifeline getOutgoingMessages() : List(Message) {
-	var messages = self.getInteraction().getMessages(); 
-	
-	return messages->select(m : Message | self.getCoveredBys()->exists(mo : InteractionFragment | mo = m.sendEvent));
-}*/
+operation Lifeline removeMsg(msg : Message){
+
+	var mosReceive = msg.getReceiveEvent();
+	var bes = msg.getBES();
+	var eos = msg.getEOS();
+
+	self.getCoveredBys().remove(mosReceive);
+	self.getCoveredBys().remove(bes);
+	self.getCoveredBys().remove(eos);
+}
+
 
 operation Lifeline getIncomingMessages() : List(Message){
-	var messages = self.getInteraction().getMessages();
+	var messages : Sequence(Message) = new Sequence(Message); 
 	
-	return messages->select(m : Message | self.getCoveredBys()->exists(mo : MessageOccurrenceSpecification | mo = m.receiveEvent)).asSequence();
+	var interactions = self.getInteractions();
+	
+	if(interactions.notEmpty()){
+		for(int in interactions ){
+			messages.addAll(int.getMessages());
+		}
+	}
+	return messages->select(mes : Message | mes.getReceiveEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType()).asSequence();
+}
+
+operation Lifeline getInteractionUses() : Sequence(InteractionUse){
+	
+	return self.getCoveredBys()->select(iterator | iterator.isTypeOf(InteractionUse)).asSequence();
+	
+}
+
+operation Lifeline getInteractions() : Sequence(Interaction){
+	var interactions : Sequence(Interaction) = new Sequence(Interaction);
+	
+	var interUses = self.getInteractionUses();
+	
+	for(interUse in interUses){
+		interactions.add(interUse.getRefersTo());
+	}
+	
+	interactions.add(self.getInteraction());
+	
+	return interactions;
 }
 
 operation Lifeline getOutgoingMessages() : Sequence(Message){
-	var messages = self.getInteraction().getMessages(); 
 	
-	return messages->select(m : Message | self.getCoveredBys()->exists(mo : InteractionFragment | mo = m.sendEvent)).asSequence();
+	var messages : Sequence(Message) = new Sequence(Message); 
+	
+	var interactions = self.getInteractions();
+	
+	if(interactions.notEmpty()){
+		for(int in interactions ){
+			messages.addAll(int.getMessages());
+		}
+	}
+	
+	return messages->select(mes : Message | mes.getSendEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType()).asSequence();
 }
 
 operation Lifeline getNextIncomingMessage(mes : Message) : Message{

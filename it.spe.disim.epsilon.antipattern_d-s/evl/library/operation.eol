@@ -730,6 +730,7 @@ operation getOperationWithResDemanLesser(th_minResDemand : List(Real)) : List(Op
 			var gaStep = op.getStereotype("GaStep");
 			var i : Integer = 0;
 			for(resDem in op.getValue(gaStep, "servCount")){
+				
 				if(not (resDem.asReal() < th_minResDemand[i].asReal())){
 					isMin = false;
 				}
@@ -747,4 +748,31 @@ operation getOperationWithResDemanLesser(th_minResDemand : List(Real)) : List(Op
 	}else{
 		return opLesser;
 	}
+}
+
+operation Operation retrieveOperation() : Operation{
+	var listOfIntOperands = self.getOwnerInteractionOperands();
+	if(listOfIntOperands.isEmpty())
+		return false; 
+	
+	for(int in listOfIntOperands){
+		
+		if( int.hasStereotype("GaStep") ){
+			var combFrag = int.getOwner();
+			var listOfSiblingOperands = combFrag.getOperands()->select(iterator | iterator <> int);
+			var listOfOpsWithGaStep;
+			
+			for(operand in listOfSiblingOperands){
+				if(operand.hasStereotype("GaStep") and 
+					(operand.getValue(operand.getStereotype("GaStep"), "prob").asReal()+int.getValue(int.getStereotype("GaStep"), "prob").asReal()) == 1){
+					var listOfOperations = operand.getOperations();
+					listOfOpsWithGaStep = listOfOperations->select(iterator : Operation | iterator.hasStereotype("GaStep"));
+					if(listOfOpsWithGaStep->select(iterator : Operation | iterator.F_resDemandLesserThan(th_minResDemand())).notEmpty()){
+						return listOfOpsWithGaStep->selectOne(iterator : Operation | iterator.F_resDemandLesserThan(th_minResDemand()));
+					}
+				}
+			}
+		}
+	}
+	return null;
 }

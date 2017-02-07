@@ -17,15 +17,16 @@ public class MainTest {
 		MainTest test = new MainTest();
 
 		AST ewlASTGen, eplASTGen, evlAST;
+		String sourceFile = "/Users/daniele/git/epsilon_framework/it.spe.disim.epsilon.antipattern_d-s/evl/AP-UML-MARTE.evl";
 
 		/** Evl -> Epl & Evl -> Ewl **/
 		EvlModule evlM = new EvlModule();
-		evlM.parse(test.getFileURI("/Users/peo/workspace/test/iwor2016/it.spe.disim.epsilon.antipattern_d-s/evl/AP-UML-MARTE.evl"));
+		/*evlM.parse(test.getFileURI("/Users/daniele/git/epsilon_framework/it.spe.disim.epsilon.antipattern_d-s/evl/AP-UML-MARTE.evl"));
 		evlAST = evlM.getAst();
 		eplASTGen = Evl2Epl.evl2epl(evlAST);
-		PortingUtil.ast2file(eplASTGen, "AP-UML-MARTE-generated", "epl");
+		PortingUtil.ast2file(eplASTGen, "AP-UML-MARTE-generated", "epl");*/
 		
-		evlM.parse(test.getFileURI("/Users/peo/workspace/test/iwor2016/it.spe.disim.epsilon.antipattern_d-s/evl/AP-UML-MARTE.evl"));
+		evlM.parse(test.getFileURI(sourceFile));
 		evlAST = evlM.getAst();
 		ewlASTGen = Evl2Ewl.evl2ewl(evlAST);
 		PortingUtil.ast2file(ewlASTGen, "AP-UML-MARTE-generated", "ewl");
@@ -36,7 +37,7 @@ public class MainTest {
 //		URI binUri = getClass().getResource(fileName).toURI();
 		URI uri = null;
 		
-		File tempFile = new File("/Users/peo/workspace/test/iwor2016/it.spe.disim.epsilon.antipattern_d-s/evl/AP-UML-MARTE.evl");
+		File tempFile = new File(fileName);
 		URI binUri = tempFile.toURI();
 		
 		if (binUri.toString().indexOf("bin") > -1) {

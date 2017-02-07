@@ -148,7 +148,7 @@ operation Interaction getLifelineOf(component : Any) : Lifeline {
 	"%%%%%%%".println();
 	component.println();
 	return Lifeline.allInstances->selectOne(lf | lf.namespace == self and 
-			lf.getRepresents().getType().println() == component);
+			lf.getRepresents().getType() == component);
 }
 
 operation Interaction createLifelineOf(component : Component) : Lifeline {
@@ -202,6 +202,11 @@ operation Interaction createMessage(from : Lifeline, to : Lifeline, signature : 
 	return mes;
 }
 
+operation Interaction getInteractionUses() : Sequence(InteractionUse){
+	
+	return self.allOwnedElements()->select(iterator | iterator.isTypeOf(InteractionUse)).asSequence();
+
+}
 
 
 

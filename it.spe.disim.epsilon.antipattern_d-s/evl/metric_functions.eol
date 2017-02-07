@@ -41,20 +41,55 @@ operation Operation F_probExec() : Boolean{
 	return false;
 }
 
+operation Operation F_probExec4EP() : Boolean{
+	if(not self.hasStereotype("GaStep"))
+		return false;
+		
+	var listOfMes = self.getAllOwnMessages();
+	if(listOfMes.isEmpty())
+		return false;
+		
+	if(self.retrieveOperation().isDefined()){
+		return true;
+	}
+	else{
+		return false;
+	}
+}
+
 operation Component F_probExec() : Boolean {
 	var opGreater = self.getOperationsWithResDemandGreaterOrEqual(th_maxResDemand());
+	"#### F_ProbExec : Component ####".println();
+	
 	if(opGreater.isUndefined() or opGreater.isEmpty()){
 		return false;
 	}
-	var opLesser = getOperationWithResDemanLesser(th_minResDemand());
+	var opLesser = self.getOperationsWithResDemandLesserThan(th_minResDemand());
+	
 	for (opG in opGreater){
 		var opGInteractionOperands = opG.getOwnerInteractionOperands();
 		for(opL in opLesser){
 			for(opLInteractionOperand in opL.getOwnerInteractionOperands()){
+				"@@@@@@ opLInteractionOperand @@@@@@".println();
+				opLInteractionOperand.println();
+				opL.println();
+				"@@@@@@@@@@@@".println();
 				for(opGInteractionOperand in opGInteractionOperands){
+					"$$$$$ opGInteractionOperand $$$$$$".println();
+					opGInteractionOperand.getOwner().println();
+					opG.println();
+					"$$$$$$$$$$$".println();
 					var opGInteractionOperandStereotype = opGInteractionOperand.getStereotype("GaStep");
 					var opLInteractionOperandStereotype = opLInteractionOperand.getStereotype("GaStep");
 					if(opGInteractionOperandStereotype.isDefined() and opLInteractionOperandStereotype.isDefined()){
+						opG.println();
+						opGInteractionOperand.println();
+						opGInteractionOperand.getValue(opGInteractionOperandStereotype, "prob").asReal().println();
+						"---------------".println();
+						opL.println();
+						opLInteractionOperand.println();
+						opLInteractionOperand.getValue(opLInteractionOperandStereotype, "prob").asReal().println();
+						
 						if( (opGInteractionOperand.getValue(opGInteractionOperandStereotype, "prob").asReal() + 
 								opLInteractionOperand.getValue(opLInteractionOperandStereotype, "prob").asReal() ) == 1 )
 								return true;
@@ -63,43 +98,40 @@ operation Component F_probExec() : Boolean {
 			}
 		}
 	}
+	"###########".println();
 	return false;
 }
 
-operation Component F_numClientConnects(th_maxConnects : Integer) : Boolean{
+operation Component F_numClientConnects(th_numClientConnects : Real) : Boolean{
 	
 	if(not self.hasStereotype("PaRunTInstance")) 
 		return false;
 
-	(self.getName()+" -> "+self.getRequireds().size()).println();
-
-   	if(self.getRequireds().size() >= th_maxConnects){
+   	if(self.getRequireds().size().asReal() >= th_numClientConnects){
 		return true;
 	}
 	return false;
 }
 
-operation Component F_numMsgsIn(th_maxMsgs : Integer) : Boolean{
+operation Component F_numMsgsIn(th_numReceivedMsgs : Real) : Boolean{
 	
-	if(self.getCriticalLifeline4BlobContainerAP(th_maxMsgs).notEmpty())
+	if(self.getCriticalLifeline4BlobContainerAP(th_numReceivedMsgs).notEmpty())
 		return true;
 	return false;
 }
 
-operation Component F_numMsgsOut(th_maxMsgs : Integer) : Boolean{
-	if(self.getCriticalLifeline4BlobControllerAP(th_maxMsgs).notEmpty())
+operation Component F_numMsgsOut(th_numSentMsgs : Real) : Boolean{
+	if(self.getCriticalLifeline4BlobControllerAP(th_numSentMsgs).notEmpty())
 		return true;
 	return false;
 }
 
-operation Component F_numSupplierConnects(th_maxConnects : Integer) : Boolean{
+operation Component F_numSupplierConnects(th_numSupplierConnects : Real) : Boolean{
 
 	if(not self.hasStereotype("PaRunTInstance")) 
 		return false;
 	
-	(self.getName()+" -> "+self.getProvideds().size()).println();
-
-	if(self.getProvideds().size() >= th_maxConnects)	
+	if(self.getProvideds().size().asReal() >= th_numSupplierConnects)	
 		return true;
 		
 	return false;
@@ -148,7 +180,7 @@ operation Component F_numExF(th_maxExF : Integer ) : Boolean{
  *********************************************************************************************/
 operation Operation F_resDemandGreaterOrEqualThan( th_maxResDemand : List(Real) ) : Boolean{
 	
-	var turnback : Boolean = true;
+	var turnback : Boolean = false;
 	
 	var appliedStereotypes = self.getAppliedStereotypes();
 	
@@ -158,8 +190,8 @@ operation Operation F_resDemandGreaterOrEqualThan( th_maxResDemand : List(Real) 
 	var i : Integer = 0;
 	
 	for(demand in servCount){
-		if(demand.asReal() < th_maxResDemand.at(i).asReal() ){ //al primo demand non > della soglia relativa ritorna false
-			turnback = false;
+		if(demand.asReal() >= th_maxResDemand.at(i).asReal() ){ //al primo demand > della soglia relativa ritorna true
+			turnback = true;
 			break;
 		}
 		i = i+1;
@@ -169,14 +201,15 @@ operation Operation F_resDemandGreaterOrEqualThan( th_maxResDemand : List(Real) 
 }
 
 operation Operation F_resDemandLesserThan( th_minResDemand : List(Real) ) : Boolean{
-	var turnback : Boolean = true;
+	var turnback : Boolean = false;
 	var appliedStereotypes = self.getAppliedStereotypes();
 	var gaStep = self.getStereotype('GaStep');
 	var servCount = self.getValue(gaStep, 'servCount');
+	
 	var i : Integer = 0;
 	for(demand in servCount){
-		if(demand.asReal() >= th_minResDemand.at(i) ){ //al primo demand non > della soglia relativa ritorna false
-			turnback = false;
+		if(demand.asReal() < th_minResDemand.at(i) ){ //al primo demand < della soglia relativa ritorna true
+			turnback = true;
 			break;
 		}
 		i = i+1;
@@ -186,7 +219,7 @@ operation Operation F_resDemandLesserThan( th_minResDemand : List(Real) ) : Bool
 
 operation Operation F_resDemand(th_maxResDemand : List(Real)) : Boolean{
 
-	var turnback : Boolean = true;
+	var turnback : Boolean = false;
 	
 	if(not self.hasStereotype("GaStep"))
 		return false;
@@ -200,8 +233,8 @@ operation Operation F_resDemand(th_maxResDemand : List(Real)) : Boolean{
 	}else{
 		for(demand in servCount){
 			
-			if(demand.asReal() < th_maxResDemand.at(i) ){ //al primo demand non > della soglia relativa ritorna false
-				turnback = false;
+			if(demand.asReal() >= th_maxResDemand.at(i) ){ //al primo demand non > della soglia relativa ritorna true
+				turnback = true;
 				break;
 			}
 			i = i+1;
@@ -265,9 +298,9 @@ operation Component F_resDemand(th_maxOpResDemand : List( Real ), th_minResDeman
 		return false;
 				
 	var opGreater = self.getOperationsWithResDemandGreaterOrEqual(th_maxOpResDemand);
-	var opLesser = getOperationWithResDemanLesser(th_minResDemand);
+	var opLesser = self.getOperationsWithResDemandLesserThan(th_minResDemand);
 	
-	if(not opGreater.isEmpty() and not opLesser.isEmpty()){
+	if(opGreater.notEmpty() and opLesser.notEmpty()){
 		return true;
 	}
 	return false;
@@ -387,9 +420,39 @@ operation Node F_maxHwUtil(th_maxHwUtil : Real) : Boolean {
 	if(utilization.isUndefined()){
 		return false;
 	}else{
-		//CPU and DISK of Component
 		if( utilization.asReal() >= th_maxHwUtil){
 			if ( self.getNeighboursWithLowUtilization().isUndefined() or self.getNeighboursWithLowUtilization().isEmpty() ){
+				return false;			
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+operation Node F_maxCpuUtil(th_maxCpuUtil : Real) : Boolean {
+	var maxCpuUtilization = self.getMaxCpuUtilization();
+	if(maxCpuUtilization.isUndefined()){
+		return false;
+	}else{
+		if( maxCpuUtilization.asReal() >= th_maxCpuUtil){
+			if ( self.getNeighboursWithLowCpuUtilization().isUndefined() or self.getNeighboursWithLowCpuUtilization().isEmpty() ){
+				return false;			
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+operation Node F_maxDiskUtil(th_maxDiskUtil : Real) : Boolean {
+	
+	var maxDiskUtilization = self.getMaxDiskUtilization();
+	if(maxDiskUtilization.isUndefined()){
+		return false;
+	}else{
+		if( maxDiskUtilization.asReal() >= th_maxDiskUtil){
+			if ( self.getNeighboursWithLowDiskUtilization().isUndefined() or self.getNeighboursWithLowDiskUtilization().isEmpty() ){
 				return false;			
 			}
 			return true;
@@ -405,11 +468,11 @@ operation Component F_maxHwUtil(th_maxHwUtil : Real) : Boolean{
 	return false;	
 }
 
-operation Node F_maxQL(th_maxQL : Integer) : Boolean {
+operation Node F_maxQL(th_maxQL : Real) : Boolean {
 	
 	if(self.hasStereotype("RtUnit") and
 		self.getValue(self.getStereotype("RtUnit"), "queueSize").isDefined() and 
-			self.getValue(self.getStereotype("RtUnit"), "queueSize").asInteger() > th_maxQL ){
+			self.getValue(self.getStereotype("RtUnit"), "queueSize").asReal() > th_maxQL ){
 		return true;
 	}
 	return false;
@@ -490,4 +553,10 @@ operation Component F_RT(th_SrtReq : Real) : Boolean {
 		return true;
 	}
 	return false;
+}
+
+
+
+operation Operation F_RT(th_SrtReq : Real) : Boolean{
+	return self.getUseCases()->exists(iterator | iterator.hasStereotype("GaScenario") and iterator.getValue(iterator.getStereotype("GaScenario"), "respT")->first().asReal() > th_SrtReq ).println();
 }

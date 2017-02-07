@@ -2,3 +2,14 @@ operation InteractionOperand createFragment(name : String){
 	var fragment = self.createFragment();
 	return fragment;
 }
+
+operation InteractionOperand getOperations() : Sequence(Operation){
+	var MOSes = self.getOwnedElements()->select(iterator | iterator->isTypeOf(MessageOccurrenceSpecification));
+	var operations : Sequence(Operation);
+	var MOSesOfMes = MOSes->select(iterator | iterator.getMessage().isTypeOf(Message));
+	for(mos in MOSesOfMes){
+		if(mos.getMessage().getSignature().isTypeOf(Operation) and not operations->exists(it : Operation | it == mos.getMessage().getSignature()) )
+			operations.add(mos.getMessage().getSignature());
+	}
+	return operations;
+}

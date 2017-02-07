@@ -361,72 +361,27 @@ operation Component getSendingMessages() : Integer{
 	}
 }
 
-/*operation Component getCriticalMessages4BlobControllerAP(th_maxMsgs : Integer) : Map {
-	var lifelines = self.getLifelines();
-	var lfMap : Map(Lifeline, BehaviorExecutionSpecificaiton) = new Map(Lifeline, BehaviorExecutionSpecification);
-	var count : Integer = 0;
-	
-	for(lf in lifelines){
-		var beses = lf.getBESes();
-		count = 0;
-		for(bes in beses){
-			var besOwner = bes.getOwner();
-			var besStartIndex = besOwner.getIndexOf(bes.getStart()); //indice di inizio bes
-			var besFinishIndex = besOwner.getIndexOf(bes.getFinish()); //indice di fine bes
-			
-			for(intFrag in lf.getCoveredBys()){
-				if(intFrag.getOwner().getIndexOf(intFrag) > besStartIndex and intFrag.getOwner().getIndexOf(intFrag) <= besFinishIndex){
-					if(intFrag.isTypeOf(MessageOccurrenceSpecification)){
-						for( mes in lf.getInteraction().getMessages()){
-							if(not mes.getMessageSort().asString().equals("reply") and mes.getSendEvent() == intFrag){
-								count = count + 1;
-							}
-						}
-					}
-					
-				}
-			}
-			if(count > th_maxMsgs){
-				lfMap.put(lf, bes);
-			}
-		} 
-	} 
-	
-	return lfMap;
-}*/
-
-operation Component getCriticalLifeline4BlobContainerAP(th_maxMsgs : Integer) : Sequence(Lifeline){
+operation Component getCriticalLifeline4BlobContainerAP(th_numReceivedMsgs : Real) : Sequence(Lifeline){
 	var returnValue : Sequence(Lifeline) = new Sequence(Lifeline);
 	var lifelines = self.getLifelines();
 	
 	for(lf in lifelines){
 		var incomingMsgs = lf.getIncomingMessages();
 
-		if(incomingMsgs.size() >= th_maxMsgs)
+		if(incomingMsgs.size().asReal() >= th_numReceivedMsgs)
 			returnValue.add(lf);
 	}
 	
 	return returnValue;
 }
 
-/*operation Component getCriticalOperations4BlobControllerAP(th_maxMsgs : Integer) : Sequence(Operation){
-	var returnValue : Sequence(Operation) = new Sequence(Operation);
-	
-	for(msg in self.getCriticalMessages4BlobControllerAP(th_maxMsgs)){
-		returnValue.add(msg.getSignature());
-	}
-	return returnValue;
-}*/
-
-operation Component getCriticalLifeline4BlobControllerAP(th_maxMsgs : Integer) : Sequence(Lifeline){
+operation Component getCriticalLifeline4BlobControllerAP(th_numSentMsgs : Real) : Sequence(Lifeline){
 	var returnValue : Sequence(Lifeline) = new Sequence(Lifeline);
 	var lifelines = self.getLifelines();
-	"bongo".println();
+
 	for(lf in lifelines){
-		
 		var outgoingMsgs = lf.getOutgoingMessages();
-		
-		if(outgoingMsgs.size() >= th_maxMsgs){
+		if(outgoingMsgs.size().asReal() >= th_numSentMsgs){
 			returnValue.add(lf);
 		}
 	}
@@ -470,11 +425,9 @@ operation Component getNodesWithNetworkUsageLesserThan(th_minNetUtil : Real) : S
 operation Component getOperationsWithResDemandGreaterOrEqual(th_maxResDemand : List(Real) ) : List(Operation){
 	var listOfOperations = self.getOperations();
 	var returnValue : List(Operation) = new List(Operation);
-	
 	for(op in listOfOperations){
-	
 		if(op.hasStereotype('GaStep')){
-			if(op.F_resDemandGreaterOrEqualThan(th_maxResDemand) ){
+			if( op.F_resDemandGreaterOrEqualThan(th_maxResDemand) ){
 				returnValue.add(op);
 			}
 		}
@@ -551,9 +504,9 @@ operation Component getRemoteMesIntoInteractions() : Map{
 	
 	for(int in selfInteractions){
 		var seqOfMes = int.getOutcomingMessageOf(self);
-
-		if(seqOfMes.first().isDefined()){
-			recipient = seqOfMes.first().getSignature().getClass_();
+		
+		if(seqOfMes->first().isDefined()){
+			recipient = seqOfMes->first().getSignature().getClass_();
 		}
 
 		for(mes in seqOfMes){
@@ -565,13 +518,7 @@ operation Component getRemoteMesIntoInteractions() : Map{
 						seqMes.add(mes);
 					}else if(recipient <> component){ //da testare con un sequence con piu sequenze di messaggi
 						mapComponentMessages.put(recipient, seqMes.clone());
-						"******** recipient *******".println();
-						recipient.println();
-						"******** recipient *******".println();
 						seqMaps.add(mapComponentMessages.clone());
-						"####### mapComponentMessages ############".println();
-						mapComponentMessages.println();
-						"####### mapComponentMessages ############".println();
 						seqMes.clear();
 						mapComponentMessages.clear();
 						recipient == component;
@@ -598,7 +545,6 @@ operation Component getRemoteMesIntoInteractions() : Map{
 operation Component countRemoteInstances(th_maxRemInst : Integer) : Boolean{
 	var map = self.getRemoteMesIntoInteractions();
 	var seqLf : Sequence(Lifeline) = new Sequence(Lifeline);
-	
 	
 	for(keySet in map.keySet()){
 		var seqOfMaps = map.get(keySet);
@@ -648,7 +594,7 @@ operation Component applySessionFacade_StaticView(remoteComp : Component, seqOfM
 	
 	opRemoteFacadeInterface.setName("opFacade_Interface");
 	
-	//create 2 components "localFacade" "remoteFacade"
+	//create 2 components "localFacade" and "remoteFacade"
 	
 	var localFacade : Component = self.createNewComponent();
 	var remoteFacade : Component = remoteComp.createNewComponent();
@@ -924,15 +870,8 @@ operation Component reduceNumberOfSupplierConnects(th_maxConnects : Real) : Bool
 	while( count >= th_maxConnects){
 			var usedInt = listOfInterfaces->at(i);
 			
-			
 			var value = usedInt.getUsedBy();
 			
-			"######".println();
-			usedInt.println();
-			self.println();
-			value.println();
-			"######".println();
-
 			if(value.notEmpty()){
 				value->first().createInterfaceRealization(usedInt.getName(), usedInt);
 				
@@ -959,10 +898,6 @@ operation Component reduceNumberOfSupplierConnects(th_maxConnects : Real) : Bool
 					int | int.hasComponent(self) and int.hasComponent(value->first()) 
 				);
 				
-				"*******".println();
-				interactions.println();
-				"*******".println();
-				
 				for(int in interactions){
 					
 					var msgs = int.getIncomingMessageOf(self)->select(
@@ -971,10 +906,12 @@ operation Component reduceNumberOfSupplierConnects(th_maxConnects : Real) : Bool
 					
 					for(msg in msgs){
 						var mosSend = msg.getSendEvent();
-						mosSend.println();
+					
+					/*
 						var mosReceive = msg.getReceiveEvent();
 						var bes = msg.getBES();
 						var eos = msg.getEOS();
+					*/
 						
 						var selfLifeline = int.getLifelineOf(self);
 						var senderLifeline = mosSend.getCovereds()->first();
@@ -983,9 +920,13 @@ operation Component reduceNumberOfSupplierConnects(th_maxConnects : Real) : Bool
 						senderLifeline.getCoveredBys().add(bes);
 						senderLifeline.getCoveredBys().add(eos);
 						
+						selfLifeline.removeMsg(msg);
+						
+					/*
 						selfLifeline.getCoveredBys().remove(mosReceive);
 						selfLifeline.getCoveredBys().remove(bes);
 						selfLifeline.getCoveredBys().remove(eos);
+					*/
 					}
 				}
 				
@@ -1037,9 +978,12 @@ operation Component reduceNumberOfClientConnects(th_maxConnects : Real) : Boolea
 					);
 					
 					for(msg in msgs){
+						
+					/*
 						var mosReceive = msg.getReceiveEvent();
 						var bes = msg.getBES();
 						var eos = msg.getEOS();
+					*/
 						
 						var selfLifeline = int.getLifelineOf(self);
 						var recipientLifeline = int.getLifelineOf(op.getClass_());
@@ -1048,9 +992,14 @@ operation Component reduceNumberOfClientConnects(th_maxConnects : Real) : Boolea
 						selfLifeline.getCoveredBys().add(bes);
 						selfLifeline.getCoveredBys().add(eos);
 						
+						recipientLifeline.removeMsg(msg);
+						
+					/*
 						recipientLifeline.getCoveredBys().remove(mosReceive);
 						recipientLifeline.getCoveredBys().remove(bes);
 						recipientLifeline.getCoveredBys().remove(eos);
+					*/
+
 					}
 				}
 				

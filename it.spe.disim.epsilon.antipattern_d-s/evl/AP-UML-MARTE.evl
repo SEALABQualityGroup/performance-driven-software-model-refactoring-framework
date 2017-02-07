@@ -18,6 +18,7 @@ import "library/node.eol";
 import "library/operation.eol";
 import "library/package.eol";
 
+
 /*********************************************************************************************
  *																							 *
  *	 								Pipe and Filter 										 *
@@ -25,7 +26,7 @@ import "library/package.eol";
  *										reviewed											 *
  *********************************************************************************************/
 
-/*context Operation {
+context Operation {
 	critique PaF {
 		check: 
 			not (self.F_probExec() and 
@@ -63,7 +64,7 @@ import "library/package.eol";
 			}
 		}
 	}
-}*/
+}
 
 
 /*********************************************************************************************
@@ -73,7 +74,14 @@ import "library/package.eol";
  *									 reviewwed												 *
  *********************************************************************************************/
  
-/*context Node {
+ 
+/*********************************************************************************************
+ *                                      WARNING												 *
+ *							MAX HW UTIL is in the first position							 *
+ *					CPU max and min are in second and third position						 *	
+ *					DISK max and min are in fourth and fifth position						 *
+ *********************************************************************************************
+context Node {
 	critique CPS {
 		check: 
 			not ( self.F_maxQL(th_maxQL()) and self.F_maxHwUtil(th_maxHwUtil()) )
@@ -106,13 +114,81 @@ import "library/package.eol";
 	}
 }*/
 
+context Node {
+	critique CPS_CPU {
+		check: 
+			not ( self.F_maxQL(th_maxQL()) and self.F_maxCpuUtil(th_maxHwUtil()->second()) )
+		message : "CPS_CPU <" + self.type.name + "> " + self.name
+		fix {
+			title : "Move it to a new Component deployed to a new Node"
+			
+			do {
+				self.moveToNewComponentDeployedOnNewNode(); 
+			}
+		}
+		fix{
+			title : "Move it to a new Component deployed to the less used neighbour Node"
+			do{
+				self.moveToNewComponentDeployedOnNearLessUsedNode();
+			}
+		}
+		fix{
+			title : "Redeploy its owning Component "+self.name+" to the less used neighbour Node"
+			do{
+				self.redeployOnNearLessUsedNode();
+			}
+		}
+		fix{
+			title : "Change its owning Component from "+self.name+" to the one with the lowest demand"
+			do{
+				self.moveToLessCriticalComponent();
+			}
+		}
+	}
+}
+
+context Node {
+	critique CPS_DISK {
+		check: 
+			not ( self.F_maxQL(th_maxQL()) and self.F_maxDiskUtil(th_maxHwUtil()->third()) )
+		message : "CPS_DISK <" + self.type.name + "> " + self.name
+		fix {
+			title : "Move it to a new Component deployed to a new Node"
+			
+			do {
+				self.moveToNewComponentDeployedOnNewNode(); 
+			}
+		}
+		fix{
+			title : "Move it to a new Component deployed to the less used neighbour Node"
+			do{
+				self.moveToNewComponentDeployedOnNearLessUsedNode();
+			}
+		}
+		fix{
+			title : "Redeploy its owning Component "+self.name+" to the less used neighbour Node"
+			do{
+				self.redeployOnNearLessUsedNode();
+			}
+		}
+		fix{
+			title : "Change its owning Component from "+self.name+" to the one with the lowest demand"
+			do{
+				self.moveToLessCriticalComponent();
+			}
+		}
+	}
+}
+
 /*********************************************************************************************
  *																							 *
  *	 								Extensive Processing  									 *
  *							Antipattern Detection and Validation							 *
  *										reviewed											 *
  *********************************************************************************************/
-/* context Component {
+
+/*
+context Component {
  	critique ExtensiveProcessingAP{
  		check:
  			not (self.F_resDemand(th_maxResDemand(), th_minResDemand()) and 
@@ -147,6 +223,40 @@ import "library/package.eol";
  	}
 }*/
 
+context Operation {
+ 	critique ExtensiveProcessingAP{
+ 		check:
+ 			not ( self.F_resDemand(th_maxResDemand()) and self.F_probExec4EP() and ( self.F_maxHwUtil(th_maxHwUtil()->first()) or self.F_RT(th_SrtReq() ) ) ) 
+ 		//message : "EP <" + self.getName() + "> with <" + self.retrieveOperation().getName() + ">"
+ 		message : "EP <" + self.getName() + "> "
+ 		fix {
+			title : "Move it to a new Component deployed to a new Node"
+			
+			do {
+				self.moveToNewComponentDeployedOnNewNode(); 
+			}
+		}
+		fix{
+			title : "Move it to a new Component deployed to the less used neighbour Node"
+			do{
+				self.moveToNewComponentDeployedOnNearLessUsedNode();
+			}
+		}
+		fix{
+			title : "Redeploy its owning Component "+self.name+" to the less used neighbour Node"
+			do{
+				self.redeployOnNearLessUsedNode();
+			}
+		}
+		fix{
+			title : "Change its owning Component from "+self.name+" to the one with the lowest demand"
+			do{
+				self.moveToLessCriticalComponent();
+			}
+		}
+ 	}
+}
+
 /*********************************************************************************************
  *																							 *
  *								Blob Controller & Container									 *
@@ -158,8 +268,8 @@ import "library/package.eol";
 context Component {
 	critique Blob_Controller {
 		check {
-			if( self.F_numClientConnects(th_maxConnects()) and self.F_numMsgsOut(th_maxMsgs()) and 
-				( self.F_maxHwUtil(th_maxHwUtil()) or self.F_maxNetUtil(th_maxNetUtil()) )
+			if( self.F_numClientConnects(th_maxClientConnects()) and self.F_numMsgsOut(th_numSentMsgs()) and 
+				( self.F_maxHwUtil(th_maxHwUtil()->first()) or self.F_maxNetUtil(th_maxNetUtil()) )
 			)
 				return false;
 			return true;
@@ -180,11 +290,12 @@ context Component {
 	}
 }
 
+
 context Component {
 	critique Blob_dataContainer {
 		check {
-			if( self.F_numSupplierConnects(th_maxConnects()) and self.F_numMsgsIn(th_maxMsgs()).println() and 
-				( self.F_maxHwUtil(th_maxHwUtil()) or self.F_maxNetUtil(th_maxNetUtil()) )
+			if( self.F_numSupplierConnects(th_maxSupplierConnects()) and self.F_numMsgsIn(th_numReceivedMsgs()) and 
+				( self.F_maxHwUtil(th_maxHwUtil()->first()) or self.F_maxNetUtil(th_maxNetUtil()) )
 			)
 				return false;
 			return true;
@@ -212,7 +323,9 @@ context Component {
  *							Antipattern Detection and Validation							 *
  *										reviewed											 *
  *********************************************************************************************/
- /*context Component {
+ 
+ 
+ context Component {
  	critique EmptySemiTruck{
  		check{
  			if(self.F_numRemMsgs(th_maxRemMsgs()) and 
@@ -229,7 +342,7 @@ context Component {
 			}
 		}
  	}
-}*/
+}
 
 /*********************************************************************************************
  *																							 *
@@ -237,7 +350,8 @@ context Component {
  *							Antipattern Detection and Validation							 *
  *									reviewed												 *
  *********************************************************************************************/
- /*context Component {
+ 
+ context Component {
  	critique TowerOfBabel{
  		check{
  			if(self.F_numExF(th_maxExF()) and self.F_maxHwUtil(th_maxHwUtil()))
@@ -258,7 +372,7 @@ context Component {
 			}
 		}
  	}
-}*/
+}
 
 /*********************************************************************************************
  *																							 *

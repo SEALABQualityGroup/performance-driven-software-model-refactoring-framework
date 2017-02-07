@@ -145,7 +145,8 @@ operation Node getArtifactOf(component : Component) : Artifact{
 operation Node getUtilization() : Real{
 	var utilization : Real;
 	if(not self.hasStereotype("GaExecHost")){
-		"the node < "+ self.name + " > is not correctly stereotyped".println();
+		("the node < "+ self.name + " > is not correctly stereotyped").println();
+		"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
 		return null;
 	}
 	else{
@@ -155,7 +156,8 @@ operation Node getUtilization() : Real{
 		}else{
 			var artifacts = self.getArtifact();
 			if(artifacts.isEmpty()){
-				"the node < "+ self.name + " > does not manifest any artifact".println();
+				("the node < "+ self.name + " > does not manifest any artifact").println();
+				"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
 				return null;
 			}else{
 				for(art in artifacts){
@@ -174,6 +176,75 @@ operation Node getUtilization() : Real{
 		}
 	}
 }
+
+operation Node getMaxCpuUtilization() : Real{
+	var utilization : Real;
+	if(not self.hasStereotype("GaExecHost")){
+		("the node < "+ self.name + " > is not correctly stereotyped").println();
+		"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+		return null;
+	}
+	else{
+		var selfUtilization = self.getValue(self.getStereotype("GaExecHost"), "utilization");
+		if( not selfUtilization.notEmpty() and selfUtilization->at(1).isDefined() ){
+			return selfUtilization->at(1).asReal();
+		}else{
+			var artifacts = self.getArtifact();
+			if(artifacts.isEmpty()){
+				("the node < "+ self.name + " > does not manifest any artifact").println();
+				"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+				return null;
+			}else{
+				for(art in artifacts){
+					var listOfComponents = art.getManifestedComponents();
+					if(listOfComponents.isDefined() and not listOfComponents.isEmpty()){
+						for(com in listOfComponents){
+							var utl = com.calculateUtilization();
+							if(not utl.isEmpty()){
+								utilization = utilization + utl.at(0).asReal() + utl.at(1).asReal();
+							}
+						}
+					}
+				}
+			return utilization;
+			}
+		}
+	}
+}
+
+operation Node getMaxDiskUtilization() : Real{
+	var utilization : Real;
+	if(not self.hasStereotype("GaExecHost")){
+		("the node < "+ self.name + " > is not correctly stereotyped").println();
+		"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+		return null;
+	}
+	var selfUtilization = self.getValue(self.getStereotype("GaExecHost"), "utilization");
+	if( not selfUtilization.notEmpty() and selfUtilization->at(3).isDefined() ){
+		return selfUtilization->at(3).asReal();
+	}else{ //calcola l'utilizzazione dai componenti DA RIVEDERE
+		var artifacts = self.getArtifact();
+		if(artifacts.isEmpty()){
+			("the node < "+ self.name + " > does not manifest any artifact").println();
+			"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+			return null;
+		}else{
+			for(art in artifacts){
+				var listOfComponents = art.getManifestedComponents();
+				if(listOfComponents.isDefined() and listOfComponents.notEmpty()){
+					for(com in listOfComponents){
+						var utl = com.calculateUtilization();
+						if(utl.notEmpty()){
+							utilization = utilization + utl.at(0).asReal() + utl.at(1).asReal();
+						}
+					}
+				}
+			}
+		return utilization;
+		}
+	}
+}
+
 
 operation Node getNeighboursWithLowUtilization() : Sequence(Node){
 	var returnValue : Sequence(Node) = new Sequence(Node);
