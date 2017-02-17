@@ -90,7 +90,7 @@ operation Lifeline getOutgoingMessages() : Sequence(Message){
 		}
 	}
 	
-	return messages->select(mes : Message | mes.getSendEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType()).asSequence();
+	return messages->select(mes : Message | mes.getSendEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType() and not mes.isReturn()).asSequence();
 }
 
 operation Lifeline getNextIncomingMessage(mes : Message) : Message{

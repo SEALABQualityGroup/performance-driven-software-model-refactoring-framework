@@ -2,7 +2,7 @@ operation Message getReceiveLifeline() : Lifeline{
 	var interaction = self.getOwner(); //interaction
 	var lifeline = interaction.getLifeline(self.getReceiveEvent());
 	if(lifeline.isUndefined()){
-		"[[ Method: getReceiveLifeline() in interaction.eol ]]".errln("There was an error!!! ");
+		showError("Method: getReceiveLifeline() in interaction.eol");
 		return null;
 	}
 	

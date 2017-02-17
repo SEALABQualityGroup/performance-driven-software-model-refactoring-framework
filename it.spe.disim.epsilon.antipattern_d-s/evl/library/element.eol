@@ -60,3 +60,9 @@ operation Element reductionServDemand(percentage : Real){
 		self.setValue(stereotype, "servCount", newValue);
 	}
 }
+
+operation Element getTag(stereotype : String, tag : String) : Any{
+	if(not self.hasStereotype(stereotype))
+		return null;
+	return self.getValue(self.getStereotype(stereotype), tag);
+}

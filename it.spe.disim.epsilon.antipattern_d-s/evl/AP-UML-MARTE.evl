@@ -1,8 +1,10 @@
 import "metric_functions.eol";
-import "thresholds.eol";
+import "thresholds_BGCS.eol";
+//import "thresholds_FTA.eol";
 
 //libraries
 import "library/artifact.eol";
+import "library/association.eol";
 //import "library/class.eol";
 import "library/classifier.eol";
 import "library/component.eol";
@@ -18,6 +20,10 @@ import "library/node.eol";
 import "library/operation.eol";
 import "library/package.eol";
 
+//HELPER
+import "library/HELPER.eol";
+
+
 
 /*********************************************************************************************
  *																							 *
@@ -31,30 +37,37 @@ context Operation {
 		check: 
 			not (self.F_probExec() and 
 				self.F_resDemand(th_maxResDemand()) and
-					(not self.F_T(th_SthReq()) or not self.F_maxHwUtil(th_maxHwUtil()) ))	
+					//(not self.F_T(th_SthReq()) or not self.F_maxHwUtil(th_maxHwUtil()->first()) ))	
+					(self.F_T(th_SthReq()) or self.F_maxHwUtil(th_maxHwUtil()->first()) ))	
 		message : "PaF <Operation> " + self.name
 		fix {
-			title : "Move it to a new Component deployed to a new Node"
+			title : "Move it to a New Component deployed to a New Node"
 			do {
 				self.moveToNewOwnerDeployedOnNewNode(); 
 			}
 		}
 		fix{
-			title : "Move it to a new Component deployed to the less used neighbour Node"
+			title : "Move it to a New Component deployed to the Less Used neighbour Node"
 			do{
 				self.moveToNewOwnerDeployedOnNearLessUsedNode();
 			}
 		}
 		fix{
-			title : "Redeploy its owning Component "+self.class.name+" to the less used neighbour Node"
+			title : "Redeploy its Component to the Less Used neighbour Node"
 			do{
 				self.redeployOnNearLessUsedNode();
 			}
 		}
 		fix{
-			title : "Change its owning Component from "+self.class.name+" to the one with the lowest demand"
+			title : "Change its Component to the one with the Lowest Demand"
 			do{
 				self.moveToLessCriticalOwner();
+			}
+		}
+		fix{
+			title : "Deploy its Component to New Node"
+			do{
+				self.moveToNewNode();
 			}
 		}
 		fix{
@@ -118,28 +131,34 @@ context Node {
 	critique CPS_CPU {
 		check: 
 			not ( self.F_maxQL(th_maxQL()) and self.F_maxCpuUtil(th_maxHwUtil()->second()) )
-		message : "CPS_CPU <" + self.type.name + "> " + self.name
+		message : "CPS_CPU <Node> " + self.getName()
 		fix {
-			title : "Move it to a new Component deployed to a new Node"
+			title : "Move its critical Operation to a New Component deployed to a New Node"
 			
 			do {
-				self.moveToNewComponentDeployedOnNewNode(); 
+				self.moveToNewComponentDeployedOnNewNode();
 			}
 		}
 		fix{
-			title : "Move it to a new Component deployed to the less used neighbour Node"
+			title : "Move its critical Operation to a New Component deployed to the Less Used neighbour Node"
 			do{
 				self.moveToNewComponentDeployedOnNearLessUsedNode();
 			}
 		}
 		fix{
-			title : "Redeploy its owning Component "+self.name+" to the less used neighbour Node"
+			title : "Redeploy its Critical Component to the Less Used neighbour Node"
 			do{
 				self.redeployOnNearLessUsedNode();
 			}
 		}
 		fix{
-			title : "Change its owning Component from "+self.name+" to the one with the lowest demand"
+			title : "Redeploy its Critical Component to a New Node"
+			do{
+				self.redeployOnNewNode();
+			}
+		}
+		fix{
+			title : "Move its critical Opeartion to the one with the Lowest Demand"
 			do{
 				self.moveToLessCriticalComponent();
 			}
@@ -150,25 +169,31 @@ context Node {
 context Node {
 	critique CPS_DISK {
 		check: 
-			not ( self.F_maxQL(th_maxQL()) and self.F_maxDiskUtil(th_maxHwUtil()->third()) )
-		message : "CPS_DISK <" + self.type.name + "> " + self.name
+			not ( self.F_maxQL(th_maxQL()) and self.F_maxCpuUtil(th_maxHwUtil()->second()) )
+		message : "CPS_DISK <Node> " + self.getName()
 		fix {
-			title : "Move it to a new Component deployed to a new Node"
+			title : "Move its critical Operation to a New Component deployed to a New Node"
 			
 			do {
 				self.moveToNewComponentDeployedOnNewNode(); 
 			}
 		}
 		fix{
-			title : "Move it to a new Component deployed to the less used neighbour Node"
+			title : "Move its critical Operation to a New Component deployed to the Less Used Neighbour Node"
 			do{
 				self.moveToNewComponentDeployedOnNearLessUsedNode();
 			}
 		}
 		fix{
-			title : "Redeploy its owning Component "+self.name+" to the less used neighbour Node"
+			title : "Redeploy its Critical Component to the Less Used Neighbour Node"
 			do{
 				self.redeployOnNearLessUsedNode();
+			}
+		}
+		fix{
+			title : "Redeploy its Critical Component to New Node"
+			do{
+				self.redeployOnNewNode();
 			}
 		}
 		fix{
@@ -226,9 +251,8 @@ context Component {
 context Operation {
  	critique ExtensiveProcessingAP{
  		check:
- 			not ( self.F_resDemand(th_maxResDemand()) and self.F_probExec4EP() and ( self.F_maxHwUtil(th_maxHwUtil()->first()) or self.F_RT(th_SrtReq() ) ) ) 
- 		//message : "EP <" + self.getName() + "> with <" + self.retrieveOperation().getName() + ">"
- 		message : "EP <" + self.getName() + "> "
+ 			not ( self.F_resDemand(th_maxOpResDemand()) and self.F_probExec4EP() and ( self.F_maxHwUtil(th_maxHwUtil()->first()) or self.F_RT(th_SrtReq() ) ) ) 
+ 		message : "EP <Operation> " + self.getName()
  		fix {
 			title : "Move it to a new Component deployed to a new Node"
 			
@@ -254,6 +278,12 @@ context Operation {
 				self.moveToLessCriticalComponent();
 			}
 		}
+		fix{
+			title : "Deploy its owning Component to new Node"
+			do{
+				self.moveToNewNode();
+			}
+		}
  	}
 }
 
@@ -274,22 +304,46 @@ context Component {
 				return false;
 			return true;
 		}
-		message : "Blob Controller <" + self.type.name + "> " + self.name
+		message : "Blob Controller " + self.name
+		fix {
+			title : "Move its critical operation to a New Component deployed to a New Node"
+			
+			do {
+				self.moveToNewComponentDeployedOnNewNode(); 
+			}
+		}
 		fix{
-			title : "Redeploy its owning Component "+self.name+" to the less used neighbour Node"
+			title : "Move its critical operation to a New Component deployed to the Less Used neighbour Node"
+			do{
+				self.moveToNewComponentDeployedOnNearLessUsedNode();
+			}
+		}
+		fix{
+			title : "Redeploy it to the Less Used Neighbour Node"
 			do{
 				self.redeployOnNearLessUsedNode();
 			}
 		}
+		fix{
+			title : "Move its critial operation to the Less used Component"
+			do{
+				self.moveToLessCriticalComponent();
+			}
+		}
+		fix{
+			title : "Deploy it to New Node"
+			do{
+				self.deployOnNewNode();
+			}
+		}
 		fix {
-			title: "Reduce Client Connects <" + self.name + ">"
+			title: "Reduce its Client Connects"
 			do {
-				self.reduceNumberOfClientConnects(th_maxConnects());
+				self.reduceNumberOfClientConnects(th_maxSupplierConnects());
 			}
 		}
 	}
 }
-
 
 context Component {
 	critique Blob_dataContainer {
@@ -300,17 +354,42 @@ context Component {
 				return false;
 			return true;
 		}
-		message : "Blob Container <" + self.type.name + "> " + self.name
+		message : "Blob Container <" + self.type.name + "> " + self.getName()
+		fix {
+			title : "Move its critical operation to a new Component deployed to a new Node"
+			
+			do {
+				self.moveToNewComponentDeployedOnNewNode(); 
+			}
+		}
+		fix{
+			title : "Move it to a new Component deployed to the less used neighbour Node"
+			do{
+				self.moveToNewComponentDeployedOnNearLessUsedNode();
+			}
+		}
 		fix{
 			title : "Redeploy its owning Component "+self.name+" to the less used neighbour Node"
 			do{
 				self.redeployOnNearLessUsedNode();
 			}
 		}
-		fix {
-			title: "Reduce Supplier Connects of <"+ self.name +">"
+		fix{
+			title : "Change its owning Component from "+self.name+" to the one with the lowest demand"
 			do{
-				self.reduceNumberOfSupplierConnects(th_maxConnects());
+				self.moveToLessCriticalComponent();
+			}
+		}
+		fix{
+			title : "Deploy its owning Component to new Node"
+			do{
+				self.deployOnNewNode();
+			}
+		}
+		fix {
+			title: "Reduce Supplier Connects of "+ self.getName()
+			do{
+				self.reduceNumberOfSupplierConnects(th_maxSupplierConnects());
 			}
 		}
 	}
@@ -325,13 +404,12 @@ context Component {
  *********************************************************************************************/
  
  
- context Component {
+context Component {
  	critique EmptySemiTruck{
  		check{
  			if(self.F_numRemMsgs(th_maxRemMsgs()) and 
- 				(self.F_maxNetUtil(th_minNetUtil()) or self.F_numRemInst(th_maxRemInst()))
- 			)
- 				return false;
+ 				(self.F_maxNetUtil(th_minNetUtil()) or self.F_numRemInst(th_maxRemInst())))
+ 					return false;
  			return true;
  		}
  		message : "EST <" + self.type.name + "> " + self.name
@@ -344,12 +422,13 @@ context Component {
  	}
 }
 
+
 /*********************************************************************************************
  *																							 *
  *	 								Tower of Babel											 *
  *							Antipattern Detection and Validation							 *
  *									reviewed												 *
- *********************************************************************************************/
+ *********************************************************************************************
  
  context Component {
  	critique TowerOfBabel{

@@ -126,16 +126,6 @@ operation Component getAllInteractionProperties() : List(Property){
 	return returnValue;
 }
 
-/*
-operation Component getLifeline(interaction : Interaction) : Lifeline{
-	for(lf in interaction.getLifelines()){
-		if(lf.represents.type == self){
-			return lf; //L1
-		}	
-	}
-}
-*/
-
 operation Component getLifeline(interaction : Interaction) : Lifeline{
 	for(lf in Lifeline.allInstances){
 		if(lf.getOwner() == interaction){ 
@@ -228,6 +218,22 @@ operation Component getNearLessUsedNodes() : List(Node){
 	return listOfNearLessUsed;
 }
 
+operation Component deployOnNewNode() :Boolean {
+	
+	var listOfSelfNodes : List(Node) = self.getNodes();
+	
+	if(listOfSelfNodes.isUndefined() or listOfSelfNodes.isEmpty()){
+		showError("Method: deployOnNewNode() in component.eol");
+		return false;
+	}
+	
+	var newNode = listOfSelfNodes->first().createNewNode();
+	
+	self.deployOn(newNode);	
+	
+	return true;	
+}
+
 operation Component deployOn(node : Node){
 	var newArtifact : Artifact = new Artifact;
 	var newManifestation; 
@@ -256,12 +262,16 @@ operation Component getNeighbours() : List(Node){
 
 operation Component redeployOn(node : Node, from : Node){
 	var artifact = self.getArtifactOn(from);
+	from.println();
 	var deployment = self.getDeploymentOn(from, artifact);
+	self.println();
+	deployment.println();
 	node.getDeployments().add(deployment);
 }
 
 operation Component getArtifactOn(node : Node) : Artifact{
 	var deploymentNode: Node; 
+	
 	for (art in self.getAllArtifacts()){
 		deploymentNode = art.getDeploymentNode();
 		if(deploymentNode.isDefined() and deploymentNode == node){
@@ -272,8 +282,9 @@ operation Component getArtifactOn(node : Node) : Artifact{
 }
 
 operation Component calculateUtilization() : Sequence(Real){
-	var ownOperations = self.getOperations();
+	var ownOperations = self.getOperations()->select(iterator | iterator.hasStereotype("GaStep"));
 	var utilization : Sequence(Real) = new Sequence(Real);
+	var servCountSize : Integer = ownOperations->first().getValue(ownOperations->first().getStereotype("GaStep"), "servCount").size();
 	
 	for(op in ownOperations){
 		if(op.hasStereotype("GaStep") and op.getValue(op.getStereotype("GaStep"), "servCount").isDefined()){
@@ -281,7 +292,7 @@ operation Component calculateUtilization() : Sequence(Real){
 			for(sc in sCount){
 				utilization.add(0.0);
 			}
-			if(not sCount.isEmpty()){
+			if(sCount.notEmpty()){
 				var i : Integer = 0;
 				for(sc in sCount){
 					utilization.add(utilization.at(i).asReal() + sCount.at(i).asReal());
@@ -291,17 +302,16 @@ operation Component calculateUtilization() : Sequence(Real){
 			}
 		}
 	}
-	return utilization;
+	return (utilization / servCountSize);
 }
 
 operation Component calculateTotalUtilization() : Real{
 	var totUtilization : Real = 0.0;
-	var i : Integer = 0;
-	for (utl in self.calculateUtilization()){
-		totUtilization = totUtilization + utl;
-		i = i + 1;
+	var utilizations = self.calculateUtilization();
+	for (utl in utilizations){
+		totUtilization = totUtilization + utl.asReal();
 	}
-	return (totUtilization / i.asReal());
+	return totUtilization;
 }
 
 operation Component addUsages(usages : Sequence(Usage)){
@@ -332,21 +342,22 @@ operation Component createLifelineInto(interaction : Interaction) : Lifeline {
 
 operation Component getCriticalOperation() : Operation{
 
-	var operations = self.getOwnedOperations();
+	var operations = self.getOwnedOperations()->select(iterator | iterator.hasStereotype("GaStep"));
 	var criticalOperation : Operation;
 	var utilization : Real;
 	
 	if(operations.isUndefined() or operations.isEmpty()){
-		"[[ Method: getCriticalOperations() in operation.eol ]]".errln("There was an error!!! ");
+		showError("Method: getCriticalOperations() in operation.eol");
 		return false;
 	}
 	
 	criticalOperation = operations->first();
+	var averageDemand = criticalOperation.getAverageDemand();
 	utilization = criticalOperation.calculateTotalUtilization();
 	
 	for (op in operations){
-		if(utilization > op.calculateTotalUtilization()){
-			utilization = op.calculateTotalUtilization();
+		if(averageDemand < op.getAverageDemand()){
+			averageDemand = op.getAverageDemand();
 			criticalOperation = op;
 		}
 	}
@@ -378,9 +389,9 @@ operation Component getCriticalLifeline4BlobContainerAP(th_numReceivedMsgs : Rea
 operation Component getCriticalLifeline4BlobControllerAP(th_numSentMsgs : Real) : Sequence(Lifeline){
 	var returnValue : Sequence(Lifeline) = new Sequence(Lifeline);
 	var lifelines = self.getLifelines();
-
 	for(lf in lifelines){
 		var outgoingMsgs = lf.getOutgoingMessages();
+		for(mes in outgoingMsgs)
 		if(outgoingMsgs.size().asReal() >= th_numSentMsgs){
 			returnValue.add(lf);
 		}
@@ -463,6 +474,10 @@ operation Component getInteractions() : Sequence(Interaction){
 operation Component isRemote(component : Component) : Boolean{
 	for (node in self.getNodes()){
 		for(n in component.getNodes()){
+			if(node.hasNetworklinkWith(n)){
+				"component node hasNetworklinkWith self node".println();
+				return true;
+			}
 			if(n.isReachableByNetwork() and node.isReachableByNetwork() and n <> node){ //se n e node sono raggiungibili in rete e sono due nodi differenti
 				return true;
 			}
@@ -471,22 +486,29 @@ operation Component isRemote(component : Component) : Boolean{
 	return false;
 }
 
-operation Component countRemoteMessages(th_maxRemMsgs : Integer) : Boolean{
+operation Component countRemoteMessages(th_maxRemMsgs : Real) : Boolean{
 	var map = self.getRemoteMesIntoInteractions();
 	
 	if(map.isUndefined()){
-		"[[ Method: countRemoteMessages() in component.eol ]]".errln("There was an error!!! ");
+		showError("Method: countRemoteMessages() in component.eol");
 		return false;
 	}
 	
+	var totalNumberOfSentMessages : Real = 0.0;
+	
 	for(ks in map.keySet()){
-		
 		for(m in map.get(ks)){
 			for(k in m.keySet()){
-				if(m.get(k).size() >= th_maxRemMsgs) //numero di messaggi remoti in un interaction tra a e b
+				totalNumberOfSentMessages = totalNumberOfSentMessages + m.get(k).size().asReal();
+				if(m.get(k).size().asReal() >= th_maxRemMsgs){ //numero di messaggi remoti in un interaction tra a e b
 					return true;
+				}
 			}
 		}
+		if(totalNumberOfSentMessages >= th_maxRemMsgs){
+			return true;
+		}
+		
 	}
 	return false;
 }
@@ -508,33 +530,35 @@ operation Component getRemoteMesIntoInteractions() : Map{
 		if(seqOfMes->first().isDefined()){
 			recipient = seqOfMes->first().getSignature().getClass_();
 		}
-
 		for(mes in seqOfMes){
 			if(not mes.isReturn() and mes.hasStereotype("GaCommStep")){
 				var lf = mes.getReceiveLifeline(); //lifeline destinataria
 				var component = lf.getRepresents().getType(); //componente
+				
+				
 				if(component.isTypeOf(Component) and component.isRemote(self) ){ // i due componenti sono remoti
 					if (recipient.isUndefined() or recipient == component ){
 						seqMes.add(mes);
 					}else if(recipient <> component){ //da testare con un sequence con piu sequenze di messaggi
+						
 						mapComponentMessages.put(recipient, seqMes.clone());
 						seqMaps.add(mapComponentMessages.clone());
 						seqMes.clear();
+						seqMes.add(mes);
 						mapComponentMessages.clear();
 						recipient == component;
 					}
 				}
-			} 
+			}
 		}
-		
-		if(not seqMes.isEmpty()){
+		if(seqMes.notEmpty()){
 			mapComponentMessages.put(recipient, seqMes.clone());
 			seqMaps.add(mapComponentMessages.clone());
 			seqMes.clear();
 			mapComponentMessages.clear();
 		}
 		
-		if(not seqMaps.isEmpty() ){
+		if(seqMaps.notEmpty() ){
 			returnMap.put(int, seqMaps.clone());
 			seqMaps.clear();
 		}
@@ -696,39 +720,7 @@ operation Component applySessionFacade_DynamicView(remoteComp : Component, local
 
 //building messages from remote facade to remote component 
 	for(mes in seqOfMes){
-	
 		var newMes = interaction.createMessage(remoteFacadeLf, remoteCompLf, mes.getSignature());
-		
-		/*var newMes = interaction.createMessage(mes.getName());
-		newMes.setSignature(mes.getSignature());
-		 
-		var newMes_sendMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
-		interaction.addFragmentAt(newMes_sendMOS, indexOfLastMes+1);
-		newMes_sendMOS.setName(newMes.getName()+"__sendMOS");
-		newMes_sendMOS.setMessage(newMes);
-		newMes.setSendEvent(newMes_sendMOS);
-		remoteFacadeLf.getCoveredBys().add(newMes.getSendEvent());
-		
-		var newMes_receiveMOS : MessageOccurrenceSpecification = new MessageOccurrenceSpecification;
-		interaction.addFragmentAt(newMes_receiveMOS, indexOfLastMes+2);
-		newMes_receiveMOS.setName(newMes.getName()+"__receiveMOS");
-		newMes_receiveMOS.setMessage(newMes);
-		newMes.setReceiveEvent(newMes_receiveMOS);
-		remoteCompLf.getCoveredBys().add(newMes.getReceiveEvent());
-		
-		var newMes_besLf : BehaviorExecutionSpecification = new BehaviorExecutionSpecification;
-		newMes_besLf.setName(newMes.getName()+"__bes");
-		interaction.getFragments().add(newMes_besLf);
-		remoteCompLf.getCoveredBys().add(newMes_besLf);
-		
-		var newMes_eos : ExecutionOccurrenceSpecification = new ExecutionOccurrenceSpecification;
-		newMes_eos.setName(newMes.getName()+"__eos");
-		newMes_eos.setExecution(newMes_besLf);
-		interaction.getFragments().add(newMes_eos);
-		newMes_besLf.start = newMes.getSendEvent();
-		newMes_besLf.finish = newMes_eos;
-		remoteCompLf.getCoveredBys().add(newMes_eos);
-*/
 	}
 //building messages from remote facade to remote component
 
@@ -845,20 +837,6 @@ operation Map getMostUsed() : Map {
 	return mapFormat;
 }
 
-/*operation Component reduceNumberOfSupplierConnects() : Boolean{
-	var listOfOperations = self.getOperations();
-	
-	while(self.getOperations().size() > th_maxConnects){
-		for(op in listOfOperations){
-			var listOfUsedInterface = op.getOfUsedInterface();
-			for(interface in listOfUsedInterface){
-				var targetComponent = interface.getTargets()->first().getOwner();
-				targetComponent.moveInto(op);
-			}
-		}
-	}
-}*/
-
 operation Component reduceNumberOfSupplierConnects(th_maxConnects : Real) : Boolean{
 	var listOfOperations = self.getOperations();
 	
@@ -868,70 +846,55 @@ operation Component reduceNumberOfSupplierConnects(th_maxConnects : Real) : Bool
 	
 	var i : Integer = 0;
 	while( count >= th_maxConnects){
-			var usedInt = listOfInterfaces->at(i);
+		var usedInt = listOfInterfaces->at(i);
+		var value = usedInt.getUsedBy();
+		if(value.notEmpty()){
+			value->first().createInterfaceRealization(usedInt.getName(), usedInt);
 			
-			var value = usedInt.getUsedBy();
+			var intReal = InterfaceRealization.allInstances->selectOne(ir | 
+				ir.getSuppliers()->exists(sup | sup == usedInt) and
+					ir.getClients()->exists(cli | cli == self)
+			);
+			intReal.destroy();
+				
+			var usage = Usage.allInstances->selectOne(usg | 
+				usg.getSuppliers()->exists(sup | sup = usedInt) and
+					usg.getClients()->exists(cli | cli = value->first())
+			);
 			
-			if(value.notEmpty()){
-				value->first().createInterfaceRealization(usedInt.getName(), usedInt);
+			if(usedInt.getRealizedBy()->isEmpty())
+				return null;	
 				
-				var intReal = InterfaceRealization.allInstances->selectOne(ir | 
-					ir.getSuppliers()->exists(sup | sup = usedInt) and
-						ir.getClients()->exists(cli | cli = self)
+			var op = usedInt.getRealizedBy()->first();
+			var interactions = op.getAllInteractions()->select(
+				int | int.hasComponent(self) and int.hasComponent(value->first()) 
+			);
+				
+			for(int in interactions){
+				var msgs = int.getIncomingMessageOf(self)->select(
+					m | op.getMessagesIn(int)->exists(mes | mes = m)
 				);
-				
-				intReal.destroy();
-				
-				var usage = Usage.allInstances->selectOne(usg | 
-					usg.getSuppliers()->exists(sup | sup = usedInt) and
-						usg.getClients()->exists(cli | cli = value->first())
-				);
-				
-				usage.destroy();
-				
-				if(usedInt.getRealizedBy()->isEmpty())
-					return null;	
-				
-				var op = usedInt.getRealizedBy()->first();
-				
-				var interactions = op.getAllInteractions()->select(
-					int | int.hasComponent(self) and int.hasComponent(value->first()) 
-				);
-				
-				for(int in interactions){
-					
-					var msgs = int.getIncomingMessageOf(self)->select(
-						m | op.getMessagesIn(int)->exists(mes | mes = m)
-					);
-					
-					for(msg in msgs){
-						var mosSend = msg.getSendEvent();
-					
-					/*
-						var mosReceive = msg.getReceiveEvent();
-						var bes = msg.getBES();
-						var eos = msg.getEOS();
-					*/
+				for(msg in msgs){
+					var mosSend = msg.getSendEvent();
+
+					var mosReceive = msg.getReceiveEvent();
+					var bes = msg.getBES();
+					var eos = msg.getEOS();
 						
-						var selfLifeline = int.getLifelineOf(self);
-						var senderLifeline = mosSend.getCovereds()->first();
+					var selfLifeline = int.getLifelineOf(self);
+					var senderLifeline = mosSend.getCovereds()->first();
 						
-						senderLifeline.getCoveredBys().add(mosReceive);
-						senderLifeline.getCoveredBys().add(bes);
-						senderLifeline.getCoveredBys().add(eos);
+					senderLifeline.getCoveredBys().add(mosReceive);
+					senderLifeline.getCoveredBys().add(bes);
+					senderLifeline.getCoveredBys().add(eos);
 						
-						selfLifeline.removeMsg(msg);
+					selfLifeline.removeMsg(msg);
 						
-					/*
-						selfLifeline.getCoveredBys().remove(mosReceive);
-						selfLifeline.getCoveredBys().remove(bes);
-						selfLifeline.getCoveredBys().remove(eos);
-					*/
-					}
 				}
-				
-				self.moveOperation(op);
 			}
+				
+			value->first().moveOperation(op);
+		}
 		i = i+1;
 		count = count - 1;
 	}
@@ -978,12 +941,10 @@ operation Component reduceNumberOfClientConnects(th_maxConnects : Real) : Boolea
 					);
 					
 					for(msg in msgs){
-						
-					/*
+					
 						var mosReceive = msg.getReceiveEvent();
 						var bes = msg.getBES();
 						var eos = msg.getEOS();
-					*/
 						
 						var selfLifeline = int.getLifelineOf(self);
 						var recipientLifeline = int.getLifelineOf(op.getClass_());
@@ -991,15 +952,8 @@ operation Component reduceNumberOfClientConnects(th_maxConnects : Real) : Boolea
 						selfLifeline.getCoveredBys().add(mosReceive);
 						selfLifeline.getCoveredBys().add(bes);
 						selfLifeline.getCoveredBys().add(eos);
-						
-						recipientLifeline.removeMsg(msg);
-						
-					/*
-						recipientLifeline.getCoveredBys().remove(mosReceive);
-						recipientLifeline.getCoveredBys().remove(bes);
-						recipientLifeline.getCoveredBys().remove(eos);
-					*/
 
+						recipientLifeline.removeMsg(msg);
 					}
 				}
 				
@@ -1030,7 +984,7 @@ operation Component createNewOperation(op : Operation) : Operation{
 
 operation Component deleteOperation(op : Operation) : Boolean{
 	if(not self.getOperations()->exists(o | o == op)){
-		"[[ Method: deleteOperation(Operation) in component.eol ]]".errln("There was an error!!! ");
+		showError("Method: deleteOperation(Operation) in component.eol");
 		return false;
 	}
 	op.destroy();
@@ -1051,5 +1005,57 @@ operation Component redeployOnNearLessUsedNode() {
 }
 
 operation Component moveToLessCriticalComponent(){
-	self.getCriticalOperation().redeployOnNearLessUsedNode();
+	self.getCriticalOperation().moveToLessCriticalComponent();
+}
+
+
+operation getLessUsedComponent() : Component{
+	var listOfSystemComponent = Component.allInstances->select(iterator | iterator.hasStereotype("PaRunTInstance"));
+	var lessUsedComp = listOfSystemComponent->selectOne(iterator | iterator.getAverageDemand() > 0.0);
+
+	var lessUsedDemand = lessUsedComp.getAverageDemand();
+	
+	for(comp in listOfSystemComponent){
+		if(comp.getAverageDemand() <> 0.0 and comp.getAverageDemand() < lessUsedDemand){
+			lessUsedDemand = comp.getAverageDemand();
+			lessUsedComp = comp;
+		}
+	}
+	return lessUsedComp;
+}
+
+operation Component getAverageDemand() : Real{
+	var operations = self.getOperations()->select(iterator | iterator.hasStereotype("GaStep"));
+	var avgDemand : Real = 0.0;
+	for(op in operations){
+		avgDemand = avgDemand + op.getAverageDemand();
+	}
+	
+	return avgDemand;
+}
+
+operation Component getAverageMaxCPUDemand() : Real{
+	var operations = self.getOperations()->select(iterator | iterator.hasStereotype("GaStep"));
+	var avgDemand : Real = 0.0;
+	
+	for(op in operations){
+		avgDemand = avgDemand + op.getCPUDemand();
+	}
+	
+	if(operations.size() > 0.0)
+		return (avgDemand/operations.size());
+	return avgDemand;
+}
+
+operation Component getAverageMaxDiskDemand() : Real{
+	var operations = self.getOperations()->select(iterator | iterator.hasStereotype("GaStep"));
+	var avgDemand : Real = 0.0;
+	
+	for(op in operations){
+		avgDemand = avgDemand + op.getDiskDemand();
+	}
+	
+	if(operations.size() > 0.0)
+		return (avgDemand/operations.size());
+	return avgDemand;
 }

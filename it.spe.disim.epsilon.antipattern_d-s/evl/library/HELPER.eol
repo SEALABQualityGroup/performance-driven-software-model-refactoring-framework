@@ -1,0 +1,10 @@
+operation getSystemCriticalComponent() : Component{
+	var components = Component.allInstances->select(iterator | iterator.hasStereotype("PaRunTInstance"));
+	
+	return components.sortBy(c : Component | c.getAverageDemand())->last();
+
+}
+
+operation showError(msg : String) {
+	"[[ "+ msg +" ]]".errln("There was an error!!! ");
+}

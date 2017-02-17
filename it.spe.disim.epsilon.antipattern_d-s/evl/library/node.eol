@@ -80,14 +80,25 @@ operation Node cloneLink(listOfLinkedNode : List(Property), packageContainer : P
 	}
 }
 
+operation Node createNewNode() : Node{
+	var newNode : Node = new Node; //creo il nuovo nodo
+	var packageContainer : Package = self.getNearestPackage();  //recupero il package container
+	newNode.name = self.name+" Splitted";
+	packageContainer.addElement(newNode);
+	return newNode;
+}
 
 operation Node clone(component : Component){
-		var newNode : Node = new Node; //creo il nuovo nodo
-		var listOfLinkedNode = self.getDirectlyLinkedNode(); //recupero la lista dei link del nodo
-		var packageContainer : Package = self.getNearestPackage();  //recupero il package container
+		/*var newNode : Node = new Node; //creo il nuovo nodo
+		 //recupero la lista dei link del nodo
+		  //recupero il package container
 		newNode.name = self.name+" Splitted";
-		packageContainer.addElement(newNode);
-
+		packageContainer.addElement(newNode);*/
+		
+		var newNode = self.createNewNode();
+		var listOfLinkedNode = self.getDirectlyLinkedNode();
+		var packageContainer : Package = self.getNearestPackage();
+		
 		newNode.cloneAppliedStereotypesFrom(self); //clono gli stereotipi del nodo sorgente
 		newNode.cloneDeployedArtifactFrom(self, component); //clono gli artefatti del nodo sorgente
 		newNode.cloneLink(listOfLinkedNode, packageContainer);
@@ -107,6 +118,16 @@ operation Node clone(class : Class) : Node{
 		return newNode;
 }
 
+operation Node redeployOnNewNode() : Boolean{
+	var criticalComponent = self.getCriticalDeployedComponent();
+	
+	"######".println();
+	criticalComponent.getName().println();
+	"######".println();
+	
+	criticalComponent.deployOnNewNode();
+	return true;
+}
 
 
 operation Node clone(component : Component, reduction : Integer){
@@ -145,8 +166,8 @@ operation Node getArtifactOf(component : Component) : Artifact{
 operation Node getUtilization() : Real{
 	var utilization : Real;
 	if(not self.hasStereotype("GaExecHost")){
-		("the node < "+ self.name + " > is not correctly stereotyped").println();
-		"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+		("the node ["+ self.getName() + "] is not correctly stereotyped").println();
+		showError("Method: getUtilization() in node.eol");
 		return null;
 	}
 	else{
@@ -156,18 +177,16 @@ operation Node getUtilization() : Real{
 		}else{
 			var artifacts = self.getArtifact();
 			if(artifacts.isEmpty()){
-				("the node < "+ self.name + " > does not manifest any artifact").println();
-				"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+				("the node ["+ self.getName() + "] does not manifest any artifact").println();
+				showError("Method: getUtilization() in node.eol");
 				return null;
 			}else{
 				for(art in artifacts){
 					var listOfComponents = art.getManifestedComponents();
 					if(listOfComponents.isDefined() and not listOfComponents.isEmpty()){
 						for(com in listOfComponents){
-							var utl = com.calculateUtilization();
-							if(not utl.isEmpty()){
-								utilization = utilization + utl.at(0).asReal() + utl.at(1).asReal();
-							}
+							var utl = com.getAverageDemand();
+							utilization = utilization + utl;
 						}
 					}
 				}
@@ -180,29 +199,27 @@ operation Node getUtilization() : Real{
 operation Node getMaxCpuUtilization() : Real{
 	var utilization : Real;
 	if(not self.hasStereotype("GaExecHost")){
-		("the node < "+ self.name + " > is not correctly stereotyped").println();
-		"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+		("the node ["+ self.getName() + "] is not correctly stereotyped").println();
+		showError("Method: getUtilization() in node.eol");
 		return null;
 	}
 	else{
 		var selfUtilization = self.getValue(self.getStereotype("GaExecHost"), "utilization");
-		if( not selfUtilization.notEmpty() and selfUtilization->at(1).isDefined() ){
+		if( selfUtilization.notEmpty() and selfUtilization->at(1).isDefined() ){
 			return selfUtilization->at(1).asReal();
 		}else{
 			var artifacts = self.getArtifact();
 			if(artifacts.isEmpty()){
-				("the node < "+ self.name + " > does not manifest any artifact").println();
-				"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+				("the node ["+ self.getName() + "] does not manifest any artifact").println();
+				showError("Method: getUtilization() in node.eol");
 				return null;
 			}else{
 				for(art in artifacts){
 					var listOfComponents = art.getManifestedComponents();
 					if(listOfComponents.isDefined() and not listOfComponents.isEmpty()){
 						for(com in listOfComponents){
-							var utl = com.calculateUtilization();
-							if(not utl.isEmpty()){
-								utilization = utilization + utl.at(0).asReal() + utl.at(1).asReal();
-							}
+							var utl = com.getAverageMaxCPUDemand();
+							utilization = utilization + utl;
 						}
 					}
 				}
@@ -215,28 +232,26 @@ operation Node getMaxCpuUtilization() : Real{
 operation Node getMaxDiskUtilization() : Real{
 	var utilization : Real;
 	if(not self.hasStereotype("GaExecHost")){
-		("the node < "+ self.name + " > is not correctly stereotyped").println();
-		"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+		("the node ["+ self.getName() + "] is not correctly stereotyped").println();
+		showError("Method: getUtilization() in node.eol");
 		return null;
 	}
 	var selfUtilization = self.getValue(self.getStereotype("GaExecHost"), "utilization");
-	if( not selfUtilization.notEmpty() and selfUtilization->at(3).isDefined() ){
+	if( selfUtilization.notEmpty() and selfUtilization->at(3).isDefined() ){
 		return selfUtilization->at(3).asReal();
 	}else{ //calcola l'utilizzazione dai componenti DA RIVEDERE
 		var artifacts = self.getArtifact();
 		if(artifacts.isEmpty()){
-			("the node < "+ self.name + " > does not manifest any artifact").println();
-			"[[ Method: getUtilization() in node.eol ]]".errln("There was an error!!! ");
+			("the node ["+ self.getName + "] does not manifest any artifact").println();
+			showError("Method: getUtilization() in node.eol");
 			return null;
 		}else{
 			for(art in artifacts){
 				var listOfComponents = art.getManifestedComponents();
 				if(listOfComponents.isDefined() and listOfComponents.notEmpty()){
 					for(com in listOfComponents){
-						var utl = com.calculateUtilization();
-						if(utl.notEmpty()){
-							utilization = utilization + utl.at(0).asReal() + utl.at(1).asReal();
-						}
+						var utl = com.getAverageMaxDiskDemand();
+						utilization = utilization + utl;
 					}
 				}
 			}
@@ -245,13 +260,12 @@ operation Node getMaxDiskUtilization() : Real{
 	}
 }
 
-
 operation Node getNeighboursWithLowUtilization() : Sequence(Node){
 	var returnValue : Sequence(Node) = new Sequence(Node);
 	
 	var lanNode = self.getLinkedNetworkNode()->first();
 	if(lanNode.isUndefined()){
-		"[[ Method: getNeighboursWithLowUtilization in node.eol ]]".errln("There was an error!!!");
+		showError("Method: getNeighboursWithLowUtilization in node.eol");
 		return null;
 	}
 	var comPaths = lanNode.getCommunicationPaths();
@@ -260,6 +274,38 @@ operation Node getNeighboursWithLowUtilization() : Sequence(Node){
 		for(me in cp.getMemberEnds()){
 			if(me.getType().isTypeOf(Node) and me.getType() <> self and me.getType() <> lanNode and
 				me.getType().hasStereotype("GaExecHost") and me.getType().hasLowUtilization()){
+					returnValue.add(me.getType());
+			}
+		}
+	}
+	return returnValue;
+}
+
+operation Node getNeighboursWithLowCpuUtilization(th_minCpuUtilization : Real) : Sequence(Node){
+	var returnValue : Sequence(Node) = new Sequence(Node);
+	
+	var comPaths = self.getCommunicationPaths();
+	
+	for (cp in comPaths){
+		for(me in cp.getMemberEnds()){
+			if(me.getType().isKindOf(Node) and me.getType() <> self and
+				me.getType().hasStereotype("GaExecHost") and me.getType().hasLowCpuUtilization(th_minCpuUtilization)){
+					returnValue.add(me.getType());
+			}
+		}
+	}
+	return returnValue;
+}
+
+operation Node getNeighboursWithLowDiskUtilization(th_minDiskUtilization : Real) : Sequence(Node){
+	var returnValue : Sequence(Node) = new Sequence(Node);
+	
+	var comPaths = self.getCommunicationPaths();
+	
+	for (cp in comPaths){
+		for(me in cp.getMemberEnds()){
+			if(me.getType().isKindOf(Node) and me.getType() <> self and
+				me.getType().hasStereotype("GaExecHost") and me.getType().hasLowDiskUtilization(th_minDiskUtilization)){
 					returnValue.add(me.getType());
 			}
 		}
@@ -297,8 +343,21 @@ operation Node isNetworkNode() : Boolean {
 	return self.hasStereotype("GaCommHost");
 }
 
+
+operation Node hasNetworklinkWith(node : Node) : Boolean{
+	for(cp in self.getCommunicationPaths()){
+		if(cp.isNetworkLink() and cp.getMemberEnds()->exists(iterator | iterator == node)){
+			return true;
+		}
+	}
+	return false;
+}
+
 operation Node isReachableByNetwork() : Boolean{
 	for(cp in self.getCommunicationPaths()){
+		if(cp.isNetworkLink()){
+			return true;
+		}
 		for(me in cp.getMemberEnds()){
 			if(me.getType().isNetworkNode()){
 				return true;
@@ -316,32 +375,46 @@ operation Node hasLowUtilization() : Boolean {
 	return false;
 }
 
+operation Node hasLowCpuUtilization(thLowCpuUtilization : Real) : Boolean {
+	if(self.getUtilization().isDefined() and 
+		(self.getUtilization().asReal() < thLowCpuUtilization) )
+			return true;
+	return false;
+}
+
+operation Node hasLowDiskUtilization(thLowDiskUtilization : Real) : Boolean {
+	if(self.getUtilization().isDefined() and 
+		(self.getUtilization().asReal() < thLowDiskUtilization) )
+			return true;
+	return false;
+}
+
+
 operation Node getCriticalDeployedComponent() : Component{
 	var artifacts = self.getArtifact();
 	var criticalComponent : List(Component);
-	var utilization : Real;
+	var utilization : Real = 0.0;
 	
 	for(art in artifacts){
 		var components = art.getManifestedComponents();
 		if(components.isUndefined() or components.isEmpty()){
-			"[[ Method: getCriticalDeployedComponent() in node.eol ]]".errln("There was an error!!! ");
+			showError("Method: getCriticalDeployedComponent() in node.eol");
 		}
-		if( components->first().calculateTotalUtilization().asString() <> "NaN"){
-			utilization = components->first().calculateTotalUtilization().asReal();
+		
+		if( components->first().getAverageDemand() <> 0.0){
+			utilization = components->first().getAverageDemand();
 			criticalComponent.add(components->first());
-		}else{
-			utilization == 0.0;
 		}
+		
 		for(comp in components){
-			if(comp.calculateTotalUtilization().asString() <> "NaN"){
-				if(utilization < comp.calculateTotalUtilization().asReal()){
-					utilization = comp.calculateTotalUtilization();
-					criticalComponent.add(comp);
-				}
+			if(utilization < comp.getAverageDemand()){
+				utilization = comp.getAverageDemand();
+				criticalComponent.add(comp);
 			}
 		}
 	}	
-	return criticalComponent.sortBy(c : Component | c.calculateTotalUtilization())->last();
+	
+	return criticalComponent.sortBy(c : Component | c.getAverageDemand())->last();
 }
 
 operation Node calculateTotalUtilization() : Real{
@@ -410,4 +483,3 @@ operation Node redeployOnNearLessUsedNode() {
 operation Node moveToLessCriticalComponent(){
 	self.getCriticalDeployedComponent().getCriticalOperation().redeployOnNearLessUsedNode();
 }
-

@@ -4,12 +4,23 @@ operation InteractionOperand createFragment(name : String){
 }
 
 operation InteractionOperand getOperations() : Sequence(Operation){
-	var MOSes = self.getOwnedElements()->select(iterator | iterator->isTypeOf(MessageOccurrenceSpecification));
+	var ownedElements = self.getOwnedElements();
+	var MOSes = ownedElements->select(iterator | iterator->isTypeOf(MessageOccurrenceSpecification));
 	var operations : Sequence(Operation);
 	var MOSesOfMes = MOSes->select(iterator | iterator.getMessage().isTypeOf(Message));
 	for(mos in MOSesOfMes){
 		if(mos.getMessage().getSignature().isTypeOf(Operation) and not operations->exists(it : Operation | it == mos.getMessage().getSignature()) )
 			operations.add(mos.getMessage().getSignature());
 	}
+	
+	
+	for(ownElement in ownedElements){
+		if(ownElement.isTypeOf(InteractionUse)){
+			for(mes in ownElement.getRefersTo().getMessages()){
+				operations.add(mes.getSignature());
+			}
+		}
+	}
+	
 	return operations;
 }

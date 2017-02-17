@@ -89,7 +89,7 @@ operation Interaction getOutcomingMessageOf(component : Component) : Sequence(Me
 	var returnValue : Sequence(Message) = new Sequence(Message);
 	var componentLf = component.getLifeline(self);
 	if(componentLf.isUndefined()){
-		"[[ Method: getMessageOf() in interaction.eol ]]".errln("There was an error!!! ");
+		showError("Method: getMessageOf() in interaction.eol");
 		return null;
 	}
 	for (mes in self.getMessages()) {
@@ -105,7 +105,7 @@ operation Interaction getIncomingMessageOf(component : Component) : Sequence(Mes
 	var returnValue : Sequence(Message) = new Sequence(Message);
 	var componentLf = component.getLifeline(self);
 	if(componentLf.isUndefined()){
-		"[[ Method: getMessageOf() in interaction.eol ]]".errln("There was an error!!! ");
+		showError("Method: getMessageOf() in interaction.eol");
 		return null;
 	}
 	for (mes in self.getMessages()) {
@@ -130,13 +130,6 @@ operation Interaction getIncomingMessageOf(component : Component) : Sequence(Mes
 operation Interaction getLifeline(mos : MessageOccurrenceSpecification) : Lifeline{
 	return Lifeline.allInstances->selectOne(lf | lf.namespace == self and 
 			lf.getCoveredBys()->exists(iterator | iterator == mos));
-	//TODO 
-	//metodo getLifelines con modello di papyrus non funziona
-	/*for(lf in self.getLifelines()){
-		if(lf.getCoveredBys()->exists(iterator | iterator == mos))
-			return lf;
-	}
-	return null;*/
 }
 
 operation Interaction getLifelineOf(component : Component) : Lifeline {
@@ -145,8 +138,6 @@ operation Interaction getLifelineOf(component : Component) : Lifeline {
 }
 
 operation Interaction getLifelineOf(component : Any) : Lifeline {
-	"%%%%%%%".println();
-	component.println();
 	return Lifeline.allInstances->selectOne(lf | lf.namespace == self and 
 			lf.getRepresents().getType() == component);
 }

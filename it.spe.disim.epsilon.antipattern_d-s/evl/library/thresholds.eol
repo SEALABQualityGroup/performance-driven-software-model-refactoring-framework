@@ -5,12 +5,17 @@ operation th_maxMsgs() : Real{
 }
 
 operation th_numReceivedMsgs() : Real{
-	var th_maxRemMsgs : Real = 2.52;
+	var th_maxRemMsgs : Real = 2.25;
 	return th_maxRemMsgs;
 }
 
 operation th_numSentMsgs() : Real{
-	var th_maxRemMsgs : Real = 2.54;
+	var th_maxRemMsgs : Real = 2.56;
+	return th_maxRemMsgs;
+}
+
+operation th_maxRemMsgs() : Real{
+	var th_maxRemMsgs : Real = 2.56;
 	return th_maxRemMsgs;
 }
 
@@ -20,13 +25,13 @@ operation th_maxRemInst() : Real{
 }
 
 operation th_maxClientConnects() : Real{
-	var th_maxConnects : Real = 1.9818;
-	return th_maxConnects;
+	var th_maxClientConnects : Real = 1.9818;
+	return th_maxClientConnects;
 }
 
 operation th_maxSupplierConnects() : Real{
-	var th_maxConnects : Real = 2.7272;
-	return th_maxConnects;
+	var th_maxSupplierConnects : Real = 2.7272;
+	return th_maxSupplierConnects;
 }
 
 operation th_maxExF() : Real{
