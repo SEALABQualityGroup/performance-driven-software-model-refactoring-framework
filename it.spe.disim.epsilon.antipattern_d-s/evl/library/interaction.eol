@@ -16,9 +16,10 @@ operation Interaction hasComponent(component : Component) : Boolean {
 	return false;
 }
 
-operation Interaction getIndexOf(fragment : InteractionFragment) : Integer{
-	var indexOf : Integer = self.getFragments()->indexOf(fragment);
-	return indexOf;
+operation Interaction getIndexOf(fragment : InteractionFragment, indexOf) : Integer{
+	//var indexOf : Integer = self.getFragments()->indexOf(fragment);
+	
+	return self.getFragments()->indexOf(fragment);
 }
 
 operation Interaction getIndexOf(op : Operation) : List(Integer){
@@ -30,12 +31,6 @@ operation Interaction getIndexOf(op : Operation) : List(Integer){
 		}
 	}
 	return returnValue;
-}
-
-operation InteractionOperand getIndexOf(fragment : InteractionFragment) : Integer{
-
-	var indexOf : Integer = self.getFragments()->indexOf(fragment);
-	return indexOf;
 }
 
 operation Interaction addFragmentAt(fragment : InteractionFragment, indexOf : Integer){

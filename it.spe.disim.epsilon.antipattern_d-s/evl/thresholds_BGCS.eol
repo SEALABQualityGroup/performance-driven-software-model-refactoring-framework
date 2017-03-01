@@ -4,14 +4,28 @@ operation th_maxMsgs() : Real{
 	return th_maxMsgs;
 }
 
-operation th_numReceivedMsgs() : Real{
+/*operation th_numReceivedMsgs() : Real{
 	var th_maxReceivedMsgs : Real = 2.25;
+	return th_maxReceivedMsgs;
+}*/
+
+operation th_numReceivedMsgs() : List(Real){
+	var th_maxReceivedMsgs : List(Real);
+	th_maxReceivedMsgs.add(1.21); // access greenhouse interaction
+	th_maxReceivedMsgs.add(2.64); //change settings 
 	return th_maxReceivedMsgs;
 }
 
-operation th_numSentMsgs() : Real{
+/*operation th_numSentMsgs() : Real{
 	var th_maxSentMsgs : Real = 2.56;
 	return th_maxSentMsgs;
+}*/
+
+operation th_numSentMsgs() : List(Real){
+	var th_numSentMsgs : List(Real);
+	th_numSentMsgs.add(1.58); // access greenhouse interaction
+	th_numSentMsgs.add(3.53); //change settings 
+	return th_numSentMsgs;
 }
 
 operation th_maxRemMsgs() : Real{

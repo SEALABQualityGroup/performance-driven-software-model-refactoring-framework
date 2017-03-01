@@ -45,17 +45,21 @@ operation Lifeline removeMsg(msg : Message){
 }
 
 
-operation Lifeline getIncomingMessages() : List(Message){
+operation Lifeline getIncomingMessages() : Map{
 	var messages : Sequence(Message) = new Sequence(Message); 
+	
+	var map : Map(Interaction, Sequence(Message));
 	
 	var interactions = self.getInteractions();
 	
 	if(interactions.notEmpty()){
 		for(int in interactions ){
 			messages.addAll(int.getMessages());
+			map.put(int, messages->select(mes : Message | mes.getReceiveEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType() and mes.notReturn()));
+			//messages->select(mes : Message | mes.getReceiveEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType() and mes.notReturn()).asList();
 		}
 	}
-	return messages->select(mes : Message | mes.getReceiveEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType()).asSequence();
+	return map;
 }
 
 operation Lifeline getInteractionUses() : Sequence(InteractionUse){
@@ -78,7 +82,24 @@ operation Lifeline getInteractions() : Sequence(Interaction){
 	return interactions;
 }
 
-operation Lifeline getOutgoingMessages() : Sequence(Message){
+operation Lifeline getOutgoingMessages() : Map{
+	var messages : Sequence(Message) = new Sequence(Message); 
+	
+	var map : Map(Interaction, Sequence(Message));
+	
+	var interactions = self.getInteractions();
+	
+	if(interactions.notEmpty()){
+		for(int in interactions ){
+			messages.addAll(int.getMessages());
+			map.put(int, messages->select(mes : Message | mes.getSendEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType() and mes.notReturn()));
+			//messages->select(mes : Message | mes.getReceiveEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType() and mes.notReturn()).asList();
+		}
+	}
+	return map;
+}
+
+/*operation Lifeline getOutgoingMessages() : Sequence(Message){
 	
 	var messages : Sequence(Message) = new Sequence(Message); 
 	
@@ -90,8 +111,8 @@ operation Lifeline getOutgoingMessages() : Sequence(Message){
 		}
 	}
 	
-	return messages->select(mes : Message | mes.getSendEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType() and not mes.isReturn()).asSequence();
-}
+	return messages->select(mes : Message | mes.getSendEvent().getCovereds()->first().getRepresents().getType() == self.getRepresents().getType() and mes.notReturn()).asSequence();
+}*/
 
 operation Lifeline getNextIncomingMessage(mes : Message) : Message{
 

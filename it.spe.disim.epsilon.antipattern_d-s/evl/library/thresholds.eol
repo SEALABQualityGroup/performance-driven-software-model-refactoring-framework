@@ -4,13 +4,27 @@ operation th_maxMsgs() : Real{
 	return th_maxMsgs;
 }
 
-operation th_numReceivedMsgs() : Real{
+/*operation th_numReceivedMsgs() : Real{
 	var th_maxRemMsgs : Real = 2.25;
+	return th_maxRemMsgs;
+}*/
+
+operation th_numReceivedMsgs() : List(Real){
+	var th_maxRemMsgs : List(Real);
+	th_maxRemMsgs.add(1.21); // interaction accessGreeHouse
+	th_maxRemMsgs.add(2.64); //interaction changeSettings
 	return th_maxRemMsgs;
 }
 
-operation th_numSentMsgs() : Real{
+/*operation th_numSentMsgs() : Real{
 	var th_maxRemMsgs : Real = 2.56;
+	return th_maxRemMsgs;
+}*/
+
+operation th_numSentMsgs() : List(Real){
+	var th_maxRemMsgs : List(Real);
+	th_maxRemMsgs.add(1.58); // interaction accessGreeHouse
+	th_maxRemMsgs.add(3.53); //interaction changeSettings
 	return th_maxRemMsgs;
 }
 
@@ -43,29 +57,17 @@ operation th_maxExF() : Real{
 
 operation th_maxResDemand() : List(Real){
 	var th_maxResDemand : List( Real ) = new List( Real );
-	th_maxResDemand.add(2557.50);
-	th_maxResDemand.add(922.50);
-	//th_maxResDemand.add(3.0);
-	//th_maxResDemand.add(5.0);
-	//th_maxResDemand.add(7.0);
+	th_maxResDemand.add(2557.50); //CPU
+	th_maxResDemand.add(922.50); //DISK
 	return th_maxResDemand;
 }
 
 operation th_minResDemand() : List(Real){	
 	var th_minResDemand : List( Real ) = new List( Real );
-	th_minResDemand.add(1136.67);
-	th_minResDemand.add(410.0);
-	//th_minResDemand.add(1.0);
-	//th_minResDemand.add(1.0);
-	//th_minResDemand.add(1.0);
+	th_minResDemand.add(1136.67); //CPU
+	th_minResDemand.add(410.0); //DISK
 	return th_minResDemand;
 }
-
-/*operation th_maxHwUtil() : Real{
-	//Hw Utilization
-	var th_maxHwUtil : Real = 0.85;
-	return th_maxHwUtil;
-}*/
 
 operation th_maxHwUtil() : Sequence(Real){
 	//Hw Utilization

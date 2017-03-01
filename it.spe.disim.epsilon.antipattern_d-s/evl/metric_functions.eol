@@ -91,6 +91,10 @@ operation Component F_probExec() : Boolean {
 
 operation Component F_numClientConnects(th_numClientConnects : Real) : Boolean{
 	
+	if(debug()){
+		("number of Client Connects of ["+self.getName()+"] --> "+self.getRequireds().size()).println();
+	}
+	
 	if(not self.hasStereotype("PaRunTInstance")) 
 		return false;
 
@@ -100,26 +104,47 @@ operation Component F_numClientConnects(th_numClientConnects : Real) : Boolean{
 	return false;
 }
 
-operation Component F_numMsgsIn(th_numReceivedMsgs : Real) : Boolean{
+operation Component F_numMsgsIn(th_numReceivedMsgs : List(Real)) : Boolean{
 	
-	if(self.getCriticalLifeline4BlobContainerAP(th_numReceivedMsgs).notEmpty())
+	if(debug()){
+		"######### DEBUG ##########".println();
+		self.println();
+		("getCriticalLifeline4BlobContainerAP --> "+self.getCriticalLifeline4BlobContainerAP(th_numReceivedMsgs)).println();
+		"######### DEBUG ##########".println();
+	}
+	
+	if(self.getCriticalLifeline4BlobContainerAP(th_numReceivedMsgs).isDefined() and not self.getCriticalLifeline4BlobContainerAP(th_numReceivedMsgs).isEmpty())
 		return true;
 	return false;
 }
 
-operation Component F_numMsgsOut(th_numSentMsgs : Real) : Boolean{
-	if(self.getCriticalLifeline4BlobControllerAP(th_numSentMsgs).notEmpty())
+operation Component F_numMsgsOut(th_numSentMsgs : List(Real)) : Boolean{
+	if(debug()){
+		"######### DEBUG ##########".println();
+		self.println();
+		("getCriticalLifeline4BlobControllerAP --> "+self.getCriticalLifeline4BlobControllerAP(th_numSentMsgs).size()).println();
+		"######### DEBUG ##########".println();
+	}
+	
+	if(self.getCriticalLifeline4BlobControllerAP(th_numSentMsgs).isDefined() and not self.getCriticalLifeline4BlobControllerAP(th_numSentMsgs).isEmpty()){
 		return true;
+	}
 	return false;
 }
 
 operation Component F_numSupplierConnects(th_numSupplierConnects : Real) : Boolean{
-
-	if(not self.hasStereotype("PaRunTInstance")) 
+	
+	if(debug()){
+		("number of Supplier Connects of ["+self.getName()+"] --> "+self.getProvideds().size()).println();
+	}
+	
+	if(not self.hasStereotype("PaRunTInstance")){
 		return false;
+	}
 		
-	if(self.getProvideds().size().asReal() >= th_numSupplierConnects)	
+	if(self.getProvideds().size().asReal() >= th_numSupplierConnects){
 		return true;
+	}
 		
 	return false;
 }
@@ -166,9 +191,75 @@ operation Component F_numExF(th_maxExF : Integer ) : Boolean{
  *									PERFORMANCE												 *
  *																							 *
  *********************************************************************************************/
+operation Node F_resDemandDiskGreaterOrEqualThan( th_maxResDemandDisk : Real ) : Boolean{
+	
+	var turnback : Boolean = false;
+	
+	var criticOperation = self.getDiskCriticOperation();
+	
+	if(criticOperation.isUndefined() or criticOperation.getAppliedStereotypes().isUndefined() ){
+		showError("Context: Node, Method: F_resDemandDiskGreaterOrEqualThan() in metrics_functions.eol");
+		return false;
+	}
+	
+	if(not criticOperation.hasStereotype("GaStep")){
+		("the opearion ["+self.getName()+"] is not correctly stereotyped").println();
+		showError("Method: F_resDemandDiskGreaterOrEqualThan() in metrics_functions.eol");
+		return false;
+	}
+	var servCount = criticOperation.getTag("GaStep", "servCount");
+	
+	var i : Integer = 0;
+	
+	if(servCount->second().asReal() >= th_maxResDemandDisk ){
+		return true;
+	}
+	return false;	
+}
+
+operation Node F_resDemandCpuGreaterOrEqualThan( th_maxResDemandCpu : Real ) : Boolean{
+	
+	var turnback : Boolean = false;
+	
+	var criticOperation = self.getCpuCriticOperation();
+	
+	if(debug()){
+		("criticOperation of ["+self.getName()+"]").println();
+		("criticOperation --> "+criticOperation).println();
+	}
+	
+	if(criticOperation.isUndefined() or criticOperation.getAppliedStereotypes().isUndefined() ){
+		showError("Context: Node, Method: F_resDemandCpuGreaterOrEqualThan() in metrics_functions.eol");
+		return false;
+	}
+	
+	if(not criticOperation.hasStereotype("GaStep")){
+		showError("the opearion ["+self.getName()+"] is not correctly stereotyped");
+		showError("Method: F_resDemandCpuGreaterOrEqualThan() in metrics_functions.eol");
+		return false;
+	}
+	
+	var servCount = criticOperation.getTag("GaStep", "servCount");
+	
+	if(debug()){
+		("servCount of ["+self.getName()+"] --> "+servCount).println();
+		("th_maxResDemandCpu --> "+th_maxResDemandCpu).println();
+	}
+	
+	if(servCount->first().asReal() >= th_maxResDemandCpu ){
+		return true;
+	}
+	
+	return turnback;	
+}
+
 operation Operation F_resDemandGreaterOrEqualThan( th_maxResDemand : List(Real) ) : Boolean{
 	
 	var turnback : Boolean = false;
+	
+	if(self.isUndefined() or self.getAppliedStereotypes().isUndefined() ){
+		showError("Method: F_resDemandGreaterOrEqualThan() in metrics_functions.eol");
+	}
 	
 	var appliedStereotypes = self.getAppliedStereotypes();
 	
@@ -188,11 +279,86 @@ operation Operation F_resDemandGreaterOrEqualThan( th_maxResDemand : List(Real) 
 	return turnback;	
 }
 
+operation Operation F_resDemandCpuGreaterOrEqualThan( th_maxCpuResDemand : Real ) : Boolean{
+	
+	var turnback : Boolean = false;
+	
+	if(self.isUndefined() or self.getAppliedStereotypes().isUndefined() ){
+		showError("Method: F_resDemandGreaterOrEqualThan() in metrics_functions.eol");
+	}
+	
+	var servCount = self.getTag("GaStep", "servCount");
+	
+	if(servCount->first().asReal() >= th_maxCpuResDemand ){ //al primo demand > della soglia relativa ritorna true
+		if(debug()){
+			("servCount of ["+self.getName()+"] -->"+servCount).println();	
+			("th_maxCpuResDemand -->"+th_maxCpuResDemand).println();	
+		}
+		return true;
+	}
+	return false;	
+}
+
+operation Operation F_resDemandDiskGreaterOrEqualThan( th_maxDiskResDemand : Real ) : Boolean{
+	
+	var turnback : Boolean = false;
+	
+	if(self.isUndefined() or self.getAppliedStereotypes().isUndefined() ){
+		showError("Method: F_resDemandGreaterOrEqualThan() in metrics_functions.eol");
+	}
+	
+	var servCount = self.getTag("GaStep", "servCount");
+	
+	if(servCount->second().asReal() >= th_maxDiskResDemand ){ //al primo demand > della soglia relativa ritorna true
+		return true;
+	}
+	
+	return false;	
+}
+
+operation Operation F_resDemandCpuLesserThan( th_minResDemandCpu : Real ) : Boolean{
+	var turnback : Boolean = false;
+	
+	if(self.isUndefined() or self.getAppliedStereotypes().isUndefined() ){
+		("the operation is undefined").println();
+		showError("Method: F_resDemandLesserThan() in metrics_functions.eol");
+	}
+	
+	var servCount = self.getTag("GaStep", "servCount");
+	
+	if(servCount->first().asReal() < th_minResDemandCpu ){ //al primo demand < della soglia relativa ritorna true
+		return true;
+	}
+	return false;	
+}
+
+operation Operation F_resDemandDiskLesserThan( th_minResDemandDisk : Real ) : Boolean{
+	var turnback : Boolean = false;
+	
+	if(self.isUndefined() or self.getAppliedStereotypes().isUndefined() ){
+		("the operation is undefined").println();
+		showError("Method: F_resDemandLesserThan() in metrics_functions.eol");
+	}
+	
+	var servCount = self.getTag("GaStep", "servCount");
+	
+	if(servCount->second().asReal() < th_minResDemandDisk ){ //al primo demand < della soglia relativa ritorna true
+		return true;
+	}
+	return false;	
+}
+
 operation Operation F_resDemandLesserThan( th_minResDemand : List(Real) ) : Boolean{
 	var turnback : Boolean = false;
-	var appliedStereotypes = self.getAppliedStereotypes();
-	var gaStep = self.getStereotype('GaStep');
-	var servCount = self.getValue(gaStep, 'servCount');
+	
+	if(self.isUndefined() or self.getAppliedStereotypes().isUndefined() ){
+		("the element is undefined").println();
+		showError("Method: F_resDemandLesserThan() in metrics_functions.eol");
+	}
+	
+	//var appliedStereotypes = self.getAppliedStereotypes();
+	//var gaStep = self.getStereotype('GaStep');
+	var servCount = self.getTag("GaStep", "servCount");
 	
 	var i : Integer = 0;
 	for(demand in servCount){
@@ -206,14 +372,12 @@ operation Operation F_resDemandLesserThan( th_minResDemand : List(Real) ) : Bool
 }
 
 operation Operation F_resDemand(th_maxResDemand : List(Real)) : Boolean{
-
 	var turnback : Boolean = false;
 	
 	if(not self.hasStereotype("GaStep"))
 		return false;
 	
-	var gaStep = self.getStereotype('GaStep');
-	var servCount = self.getValue(gaStep, 'servCount');
+	var servCount = self.getTag("GaStep", "servCount");
 	
 	var i : Integer = 0;
 	if(servCount.isDefined() and servCount.size() == 0){
@@ -239,37 +403,6 @@ operation Message F_resDemand(th_maxResDemand : Real) : Boolean{
 	if(self.hasStereotype("GaStep")){
 		var gaStep = self.getStereotype("GaStep");
 		var servCount = self.getValue(gaStep, "servCount");
-		for(demand in servCount){
-			if(demand.asReal() < th_maxResDemand.at(i) ){ //al primo demand non > della soglia relativa ritorna false
-				turnback = false;
-				break;
-			}
-			i = i+1;
-		}
-	}
-	return turnback;	
-}
-
-operation Operation F_resDemand() : Boolean{
-	var th_maxResDemand : List( Real ) = new List( Real );
-	th_maxResDemand.add(15); //computation
-	th_maxResDemand.add(7); //storage
-	th_maxResDemand.add(5); //bandwidth
-	var turnback : Boolean = true;
-	
-	var appliedStereotypes = self.getAppliedStereotypes();
-	
-	if(not self.hasStereotype("GaStep"))
-		return false;
-		
-	var gaStep = self.getStereotype('GaStep');
-	var servCount = self.getValue(gaStep, 'servCount');
-	
-	var i : Integer = 0;
-
-	if(servCount.isDefined() and servCount.size() == 0){
-		turnback = false;
-	}else{
 		for(demand in servCount){
 			if(demand.asReal() < th_maxResDemand.at(i) ){ //al primo demand non > della soglia relativa ritorna false
 				turnback = false;
@@ -426,7 +559,13 @@ operation Node F_maxCpuUtil(th_maxCpuUtil : Real) : Boolean {
 		return false;
 	}else{
 		if( maxCpuUtilization.asReal() >= th_maxCpuUtil){
-			if ( self.getNeighboursWithLowCpuUtilization(th_maxHwUtil()->second()).isUndefined() or self.getNeighboursWithLowCpuUtilization(th_maxHwUtil()->second()).isEmpty() ){
+			if(debug()){
+				("self.getNeighboursWithLowCpuUtilization(th_maxHwUtil()->third()).isUndefined() --> " + self.getNeighboursWithLowCpuUtilization(th_maxHwUtil()->third()).isUndefined() ).println();
+				("self.getNeighboursWithLowCpuUtilization(th_maxHwUtil()->third()).isEmpty() --> " + self.getNeighboursWithLowCpuUtilization(th_maxHwUtil()->third()).isEmpty() ).println();
+				("self.getNeighboursWithLowCpuUtilization --> " + self.getNeighboursWithLowCpuUtilization(th_maxHwUtil()->third()) ).println();
+			}
+			
+			if ( self.getNeighboursWithLowCpuUtilization(th_maxHwUtil()->third()).isUndefined() and self.getNeighboursWithLowCpuUtilization(th_maxHwUtil()->third()).isEmpty() ){
 				return false;			
 			}
 			return true;
@@ -442,7 +581,7 @@ operation Node F_maxDiskUtil(th_maxDiskUtil : Real) : Boolean {
 		return false;
 	}else{
 		if( maxDiskUtilization.asReal() >= th_maxDiskUtil){
-			if ( self.getNeighboursWithLowDiskUtilization(th_maxHwUtil()->fourth()).isUndefined() or self.getNeighboursWithLowDiskUtilization(th_maxHwUtil()->fourth()).isEmpty() ){
+			if ( self.getNeighboursWithLowDiskUtilization(th_maxHwUtil()->at(4)).isUndefined() or self.getNeighboursWithLowDiskUtilization(th_maxHwUtil()->at(4)).isEmpty() ){
 				return false;			
 			}
 			return true;
@@ -452,6 +591,10 @@ operation Node F_maxDiskUtil(th_maxDiskUtil : Real) : Boolean {
 }
 
 operation Component F_maxHwUtil(th_maxHwUtil : Real) : Boolean{
+	if(debug()){
+		("getNodesWithUtilizationGreaterThan(th_maxHwUtil) ["+self.getName()+"] --> "+self.getNodesWithUtilizationGreaterThan(th_maxHwUtil).size()).println();
+	}
+	
 	if(self.getNodesWithUtilizationGreaterThan(th_maxHwUtil).notEmpty()){
 		return true;
 	}
@@ -461,8 +604,13 @@ operation Component F_maxHwUtil(th_maxHwUtil : Real) : Boolean{
 operation Node F_maxQL(th_maxQL : Real) : Boolean {
 	
 	if(self.hasStereotype("RtUnit") and
-		self.getValue(self.getStereotype("RtUnit"), "queueSize").isDefined() and 
-			self.getValue(self.getStereotype("RtUnit"), "queueSize").asReal() > th_maxQL ){
+		self.getTag("RtUnit", "queueSize").isDefined() and 
+			self.getTag("RtUnit", "queueSize").asReal() > th_maxQL ){
+		if(debug()){
+			("queueSize of ["+self.getName()+"] --> "+self.getTag("RtUnit", "queueSize").asReal()).println();
+			("queueSize threshold --> "+th_maxQL).println();
+		}
+		
 		return true;
 	}
 	return false;

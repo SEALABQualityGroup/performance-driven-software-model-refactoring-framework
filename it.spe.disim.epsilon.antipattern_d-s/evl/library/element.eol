@@ -5,10 +5,15 @@
 */
 //clone gli stereotipi
 operation Element cloneAppliedStereotypesFrom(element : Element) {
-	for(stereotype in element.getAppliedStereotypes()){
-		self.applyStereotype(stereotype);
-		if(stereotype.name <> "RtUnit") 
-			self.setAttributeValueFrom(stereotype, element);
+	if(element.isUndefined() or element.getAppliedStereotypes().isUndefined() ){
+		("the element is undefined").println();
+		showError("Method: cloneAppliedStereotypesFrom() in element.eol");
+	}else{
+		for(stereotype in element.getAppliedStereotypes()){
+			self.applyStereotype(stereotype);
+			if(stereotype.name <> "RtUnit" and stereotype.name <> "GaExecHost") 
+				self.setAttributeValueFrom(stereotype, element);
+		}
 	}
 }
 
@@ -41,10 +46,19 @@ operation Element setTaggedValue(stereotype : Stereotype, tag : String, value : 
 }
 
 operation Element hasStereotype(stereotypeName : String) : Boolean {
+	if(self.isUndefined() or self.getAppliedStereotypes().isUndefined() ){
+		("the element is undefined").println();
+		showError("Method: hasStereotype() in element.eol");
+	}
 	return self.getAppliedStereotypes()->exists(s | s.name = stereotypeName);
 }
 
 operation Element getStereotype(stereotypeName : String) : Stereotype {
+	if(self.isUndefined() or self.getAppliedStereotypes().isUndefined() ){
+		("the element is undefined").println();
+		showError("Method: getStereotype() in element.eol");
+	}
+
 	return self.getAppliedStereotypes()->select(s | s.name = stereotypeName)->first();
 }
 
@@ -65,4 +79,16 @@ operation Element getTag(stereotype : String, tag : String) : Any{
 	if(not self.hasStereotype(stereotype))
 		return null;
 	return self.getValue(self.getStereotype(stereotype), tag);
+}
+
+
+operation Element isLegacy() : Boolean {
+	if(self.hasStereotype("Allocated")){
+		return true;
+	}
+	return false;
+}
+
+operation Element notLegacy() : Boolean {
+	return not self.isLegacy();
 }

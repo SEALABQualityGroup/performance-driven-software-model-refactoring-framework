@@ -3,7 +3,7 @@ operation Package getUsageRelations() : List(Usage){
 	var returnValue : List(Usage) = new List(Usage);
 	
 	for(relation in Usage.allInstances){
-		if( relation.isTypeOf(Usage) and relation.owner == self){
+		if( relation.isTypeOf(Usage) and relation.getOwner() == self){
 			returnValue.add(relation);
 		}
 	}
