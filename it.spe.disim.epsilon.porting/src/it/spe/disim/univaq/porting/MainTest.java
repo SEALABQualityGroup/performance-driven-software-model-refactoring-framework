@@ -21,10 +21,10 @@ public class MainTest {
 
 		/** Evl -> Epl & Evl -> Ewl **/
 		EvlModule evlM = new EvlModule();
-		/*evlM.parse(test.getFileURI("/Users/daniele/git/epsilon_framework/it.spe.disim.epsilon.antipattern_d-s/evl/AP-UML-MARTE.evl"));
+		evlM.parse(test.getFileURI(sourceFile));
 		evlAST = evlM.getAst();
 		eplASTGen = Evl2Epl.evl2epl(evlAST);
-		PortingUtil.ast2file(eplASTGen, "AP-UML-MARTE-generated", "epl");*/
+		PortingUtil.ast2file(eplASTGen, "AP-UML-MARTE-generated", "epl");
 		
 		evlM.parse(test.getFileURI(sourceFile));
 		evlAST = evlM.getAst();
