@@ -181,6 +181,14 @@ public class PortingUtil {
 		}
 	}
 	
+	public static void ast2file(AST ast, File epl_file) {
+		try {
+			FileUtils.writeStringToFile(epl_file, ASTRewrite(ast));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	/*************EVL*********************/
 	
 	public static ConstraintContext createConstaintContext(String c){
