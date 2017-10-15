@@ -510,7 +510,7 @@ operation Operation F_maxHwUtil(th_maxHwUtil : Real) : Boolean{
 	for(node in listOfProcessNode){
 		if(node.hasStereotype('GaExecHost') ){
 			var utilization = node.getValue(node.getStereotype('GaExecHost'), 'utilization')->first();
-	Â 		if( utilization.isDefined() and utilization.asReal() >= th_maxHwUtil ){
+	 		if( utilization.isDefined() and utilization.asReal() >= th_maxHwUtil ){
 				listOfProcessNodeWithUtilizationGreater.add(node);
 			}
 		}
@@ -529,7 +529,7 @@ operation Operation F_maxHwUtil() : Boolean{
 	for(node in listOfProcessNode){
 		if(node.hasStereotype('GaExecHost') ){
 			var utilization = node.getValue(node.getStereotype('GaExecHost'), 'utilization')->first();
-	Â 		if( utilization.isDefined() and utilization.asReal() >= th_maxHwUtil ){
+	 		if( utilization.isDefined() and utilization.asReal() >= th_maxHwUtil ){
 				listOfProcessNodeWithUtilizationGreater.add(node);
 			}
 		}
