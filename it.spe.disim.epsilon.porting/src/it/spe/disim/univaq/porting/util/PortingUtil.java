@@ -181,9 +181,9 @@ public class PortingUtil {
 		}
 	}
 	
-	public static void ast2file(AST ast, File epl_file) {
+	public static void ast2file(AST ast, File file) {
 		try {
-			FileUtils.writeStringToFile(epl_file, ASTRewrite(ast));
+			FileUtils.writeStringToFile(file, ASTRewrite(ast));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
